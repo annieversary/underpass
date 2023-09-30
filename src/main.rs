@@ -53,6 +53,10 @@ async fn search(Json(json): Json<SearchParams>) -> Json<SearchResults> {
     let query = preprocess_query(json.query, &json.bbox);
 
     // TODO send query to overpass, get data
+    // https://gitlab.com/trailstash/overpass-ultra/-/blob/main/overpass.js?ref_type=heads
+
+    // TODO osmtogeojson???
+    // https://lib.rs/crates/osm-to-geojson
 
     // TODO further process the data
     // we will probably need to construct a set of filters that will then process this data
@@ -67,5 +71,9 @@ async fn search(Json(json): Json<SearchParams>) -> Json<SearchResults> {
 
 fn preprocess_query(query: String, bbox: &Bbox) -> String {
     // TODO process query, do rewriting
+
+    // TODO replace {{bbox}}
+    // TODO geocode area https://github.com/tyrasd/overpass-turbo/blob/eb216aa08b06590a4efc4e10d6a25140d53fcf70/js/shortcuts.ts#L92
+
     query
 }

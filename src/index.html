@@ -68,8 +68,8 @@
 
         <script>
             const map = new maplibregl.Map({
-                container: 'map', // container id
-                style: 'https://demotiles.maplibre.org/style.json', // style URL
+                container: 'map',
+                style: 'https://demotiles.maplibre.org/style.json',
                 style: {
                     version: 8,
                     sources: {
@@ -118,11 +118,15 @@
 
 
             async function run() {
+                map
+                    .getSource("OverpassAPI")
+                    .setData({ type: "FeatureCollection", features: [] });
+
                 const r = await fetch('/search', {
                     method: 'POST',
                     body: JSON.stringify({
                         query: editor.getValue(),
-                        bbox: mapBounds(), // TODO get from leaflet
+                        bbox: mapBounds(),
                     }),
                     headers: {
                         'Content-Type': 'application/json'
@@ -131,9 +135,66 @@
                 const res = await r.json();
 
                 new maplibregl.Marker().setLngLat(res.data.reverse()).addTo(map);
+
+                // TODO
+                /* map.getSource("OverpassAPI").setData(res.data); */
             }
 
             document.querySelector('#run-button').onclick = run;
+
+            map.on("style.load", () => {
+                if (!map.getSource("OverpassAPI")) {
+                    map.addSource("OverpassAPI", {
+                        type: "geojson",
+                        data: { type: "FeatureCollection", features: [] },
+                    });
+                    const layers = [
+                        {
+                            id: "overpass-polygons",
+                            type: "fill",
+                            source: "OverpassAPI",
+                            filter: ["all", ["==", ["geometry-type"], "Polygon"]],
+                            paint: {
+                                "fill-color": "rgba(255, 204, 0, .5)",
+                            },
+                        },
+                        {
+                            id: "overpass-polygons-stroke",
+                            type: "line",
+                            source: "OverpassAPI",
+                            filter: ["all", ["==", ["geometry-type"], "Polygon"]],
+                            paint: { "line-width": 2, "line-color": "rgba(0, 51, 255, 0.6)" },
+                        },
+                        {
+                            id: "overpass-lines",
+                            type: "line",
+                            source: "OverpassAPI",
+                            filter: ["all", ["==", ["geometry-type"], "LineString"]],
+                            paint: {
+                                "line-width": 5,
+                                "line-color": "rgba(0, 51, 255, 0.6)",
+                            },
+                            layout: { "line-cap": "round" },
+                        },
+                        {
+                            id: "overpass-poi",
+                            type: "circle",
+                            source: "OverpassAPI",
+                            filter: ["all", ["==", ["geometry-type"], "Point"]],
+                            paint: {
+                                "circle-stroke-width": 2,
+                                "circle-stroke-color": "rgba(0, 51, 255, 0.6)",
+                                "circle-color": "rgba(255, 204, 0, 0.6)",
+                            },
+                        },
+                    ];
+                    for (const layer of layers) {
+                        if (!map.getLayer(layer)) {
+                            map.addLayer(layer);
+                        }
+                    }
+                }
+            });
         </script>
     </body>
 </html>

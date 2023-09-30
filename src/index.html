@@ -106,6 +106,8 @@
                 mode: "htmlmixed",
             });
 
+            editor.setValue('[out:json][timeout:25];\n\n(node["highway"]({{bbox}}););\n\nout;>;out skel qt;');
+
             function mapBounds() {
                 const b = map.getBounds();
                 return {
@@ -134,10 +136,7 @@
                 });
                 const res = await r.json();
 
-                new maplibregl.Marker().setLngLat(res.data.reverse()).addTo(map);
-
-                // TODO
-                /* map.getSource("OverpassAPI").setData(res.data); */
+                map.getSource("OverpassAPI").setData(res.data);
             }
 
             document.querySelector('#run-button').onclick = run;

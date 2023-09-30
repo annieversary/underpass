@@ -6,7 +6,12 @@ use axum::{
     Router,
 };
 use muxa::errors::*;
+use osm_to_geojson::Osm;
 use serde::{Deserialize, Serialize};
+
+use crate::osm_to_geojson::osm_to_geojson;
+
+mod osm_to_geojson;
 
 #[tokio::main]
 async fn main() {
@@ -43,37 +48,46 @@ struct Bbox {
 struct SearchParams {
     query: String,
     bbox: Bbox,
+    // we probably want like a list of Filter nodes or smth
 }
 #[derive(Serialize)]
 struct SearchResults {
-    data: [f32; 2],
+    data: geojson::GeoJson,
 }
 
+// TODO add error handling
 async fn search(Json(json): Json<SearchParams>) -> Json<SearchResults> {
     let query = preprocess_query(json.query, &json.bbox);
 
-    // TODO send query to overpass, get data
-    // https://gitlab.com/trailstash/overpass-ultra/-/blob/main/overpass.js?ref_type=heads
+    let client = reqwest::Client::new();
+    let res: Osm = client
+        .post("https://overpass-api.de/api/interpreter")
+        .body(dbg!(query))
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
 
-    // TODO osmtogeojson???
-    // https://lib.rs/crates/osm-to-geojson
+    let geojson = osm_to_geojson(res);
 
     // TODO further process the data
     // we will probably need to construct a set of filters that will then process this data
 
-    Json(SearchResults {
-        data: [
-            (json.bbox.ne[0] + json.bbox.sw[0]) / 2.0,
-            (json.bbox.ne[1] + json.bbox.sw[1]) / 2.0,
-        ],
-    })
+    Json(SearchResults { data: geojson })
 }
 
 fn preprocess_query(query: String, bbox: &Bbox) -> String {
     // TODO process query, do rewriting
 
-    // TODO replace {{bbox}}
     // TODO geocode area https://github.com/tyrasd/overpass-turbo/blob/eb216aa08b06590a4efc4e10d6a25140d53fcf70/js/shortcuts.ts#L92
 
-    query
+    query.replace(
+        "{{bbox}}",
+        &format!(
+            "{},{},{},{}",
+            bbox.sw[0], bbox.sw[1], bbox.ne[0], bbox.ne[1]
+        ),
+    )
 }

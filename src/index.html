@@ -5,9 +5,7 @@
 
         <title>Underpass</title>
 
-        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-            integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-            crossorigin=""/>
+        <link rel='stylesheet' href='https://unpkg.com/maplibre-gl@3.3.1/dist/maplibre-gl.css' />
         <link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.13.4/codemirror.css'>
         <style>
             :root {
@@ -51,9 +49,7 @@
             }
         </style>
 
-        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-            crossorigin=""></script>
+        <script src='https://unpkg.com/maplibre-gl@3.3.1/dist/maplibre-gl.js'></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/codemirror.min.js" integrity="sha512-8RnEqURPUc5aqFEN04aQEiPlSAdE0jlFS/9iGgUyNtwFnSKCXhmB6ZTNl7LnDtDWKabJIASzXrzD0K+LYexU9g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     </head>
     <body>
@@ -71,11 +67,35 @@
         </div>
 
         <script>
-            var map = L.map('map').setView([51.505, -0.09], 13);
-            L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                maxZoom: 19,
-                attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-            }).addTo(map);
+            const map = new maplibregl.Map({
+                container: 'map', // container id
+                style: 'https://demotiles.maplibre.org/style.json', // style URL
+                style: {
+                    version: 8,
+                    sources: {
+                        'raster-tiles': {
+                            type: 'raster',
+                            tiles: [
+                                'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
+                            ],
+                            tileSize: 256,
+                            attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                        }
+                    },
+                    layers: [
+                        {
+                            id: 'simple-tiles',
+                            type: 'raster',
+                            source: 'raster-tiles',
+                            minzoom: 0,
+                            maxzoom: 22
+                        }
+                    ]
+                },
+
+                center: [-0.09, 51.505,],
+                zoom: 10
+            });
 
             var editor = CodeMirror(document.getElementById("code-container"), {
                 styleActiveLine: true,
@@ -89,8 +109,8 @@
             function mapBounds() {
                 const b = map.getBounds();
                 return {
-                    ne: [b._northEast.lat, b._northEast.lng],
-                    sw: [b._southWest.lat, b._southWest.lng],
+                    ne: [b._ne.lat, b._ne.lng],
+                    sw: [b._sw.lat, b._sw.lng],
                 };
             }
 
@@ -110,7 +130,7 @@
                 });
                 const res = await r.json();
 
-                var marker = L.marker(res.data).addTo(map);
+                new maplibregl.Marker().setLngLat(res.data.reverse()).addTo(map);
             }
 
             document.querySelector('#run-button').onclick = run;

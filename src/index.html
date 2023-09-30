@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+        <title>Underpass</title>
+
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+            integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+            crossorigin=""/>
+        <link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.13.4/codemirror.css'>
+        <style>
+            :root {
+                --header-height: 4vh;
+            }
+
+            body { margin: 0; }
+
+            #header {
+                height: var(--header-height);
+                width: 100%;
+            }
+
+            #run-button {
+                font-size: 2rem;
+                border-radius: 0;
+                border: none;
+                color: white;
+                background-color: #48c774;
+                cursor: pointer;
+            }
+
+            #container {
+                display: flex;
+                flex-direction: row;
+                height: calc(100vh - var(--header-height));
+            }
+
+            #code-container {
+                width: 40%;
+                height: calc(100vh - var(--header-height));
+            }
+
+            #code-container > div {
+                height: calc(100vh - var(--header-height));
+            }
+
+            #map {
+                width: 60%;
+                height: calc(100vh - var(--header-height));
+            }
+        </style>
+
+        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+            crossorigin=""></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/codemirror.min.js" integrity="sha512-8RnEqURPUc5aqFEN04aQEiPlSAdE0jlFS/9iGgUyNtwFnSKCXhmB6ZTNl7LnDtDWKabJIASzXrzD0K+LYexU9g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    </head>
+    <body>
+        <div id="header">
+            <button id="run-button">
+                Run
+            </button>
+        </div>
+        <div id="container">
+            <div id="code-container">
+            </div>
+            <div id="map">
+
+            </div>
+        </div>
+
+        <script>
+            var map = L.map('map').setView([51.505, -0.09], 13);
+            L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            }).addTo(map);
+
+            var editor = CodeMirror(document.getElementById("code-container"), {
+                styleActiveLine: true,
+                lineNumbers: true,
+                matchBrackets: true,
+                autoCloseBrackets: true,
+                autoCloseTags: true,
+                mode: "htmlmixed",
+            });
+
+            function mapBounds() {
+                const b = map.getBounds();
+                return {
+                    ne: [b._northEast.lat, b._northEast.lng],
+                    sw: [b._southWest.lat, b._southWest.lng],
+                };
+            }
+
+
+
+
+            async function run() {
+                const r = await fetch('/search', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        query: editor.getValue(),
+                        bbox: mapBounds(), // TODO get from leaflet
+                    }),
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                });
+                const res = await r.json();
+
+                var marker = L.marker(res.data).addTo(map);
+            }
+
+            document.querySelector('#run-button').onclick = run;
+        </script>
+    </body>
+</html>

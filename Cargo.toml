@@ -1,0 +1,12 @@
+[package]
+name = "underpass"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+axum = "0.6.20"
+tokio = { version = "1.17.0", features = ["full"] }
+muxa = { git = "https://github.com/annieversary/muxa", rev = "a34152533ca0c2ed1deb9d72af5e21a502639512" }
+serde = "1.0.188"

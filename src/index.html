@@ -81,6 +81,14 @@
 
                 display: none;
             }
+            #info {
+                background: #a8e6a8c4;
+                color: black;
+                z-index: 1000;
+                position: absolute;
+                bottom: 0;
+            }
+
         </style>
 
         <script src='https://unpkg.com/maplibre-gl@3.3.1/dist/maplibre-gl.js'></script>
@@ -96,9 +104,10 @@
             <div id="code-container">
             </div>
             <div id="map">
-
+                <div id="info"> </div>
             </div>
         </div>
+
         <div id="loading-modal">
             <p>
                 loading :3
@@ -225,7 +234,8 @@
 
                         const html = `<a href="//www.openstreetmap.org/node/${f.id}" target="_blank" class="osm-link">${f.id}</a><br/><br/>
                         ${props}<br/><br/>
-                        <a href="https://google.co.uk/maps?q=${e.lngLat.lat},${e.lngLat.lng}" target="_blank" class="map-link">google maps</a>
+                        <a href="https://google.co.uk/maps?q=${e.lngLat.lat},${e.lngLat.lng}" target="_blank" class="map-link">google maps</a><br/>
+                        <a href="javascript:navigator.clipboard.writeText('${e.lngLat.lat},${e.lngLat.lng}')" class="map-link">copy</a>
                         `;
 
                         new maplibregl.Popup()
@@ -299,6 +309,10 @@
                         }
                     }
                 }
+
+                map.on('mousemove', (e) => {
+                    document.getElementById('info').innerHTML = `${e.lngLat.wrap().lat.toFixed(8)},${e.lngLat.wrap().lng.toFixed(8)}`;
+                });
             });
         </script>
     </body>

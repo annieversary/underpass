@@ -12,7 +12,10 @@
                 --header-height: 4vh;
             }
 
-            body { margin: 0; }
+            body {
+                margin: 0;
+                font-family: sans-serif;
+            }
 
             #header {
                 height: var(--header-height);
@@ -47,6 +50,29 @@
                 width: 60%;
                 height: calc(100vh - var(--header-height));
             }
+
+            .maplibregl-popup {
+                max-width: 400px;
+                font: 12px/20px 'Helvetica Neue', Arial, Helvetica, sans-serif;
+            }
+
+            #loading-modal {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100vh;
+                background: rgb(100, 100, 100, 0.5);
+                z-index: 10000;
+
+                display: flex;
+                align-items: center;
+                justify-content: center;
+
+                font-size: 3rem;
+
+                display: none;
+            }
         </style>
 
         <script src='https://unpkg.com/maplibre-gl@3.3.1/dist/maplibre-gl.js'></script>
@@ -64,6 +90,11 @@
             <div id="map">
 
             </div>
+        </div>
+        <div id="loading-modal">
+            <p>
+                loading :3
+            </p>
         </div>
 
         <script>
@@ -93,8 +124,8 @@
                     ]
                 },
 
-                center: [-0.09, 51.505,],
-                zoom: 10
+                center: [-0.0175273074135589,51.945356463918586,],
+                zoom: 15
             });
 
             var editor = CodeMirror(document.getElementById("code-container"), {
@@ -106,7 +137,7 @@
                 mode: "htmlmixed",
             });
 
-            editor.setValue('[out:json][timeout:25];\n\n(node["highway"]({{bbox}}););\n\nout;>;out skel qt;');
+            editor.setValue('[out:json][timeout:25];\n\n(way["highway"]({{bbox}}););\n\nout;>;out skel qt;');
 
             function mapBounds() {
                 const b = map.getBounds();
@@ -119,7 +150,13 @@
 
 
 
+            let loading = false;
+            let loadingModal = document.querySelector("#loading-modal");
             async function run() {
+                if (loading) return;
+                loading = true;
+                loadingModal.style.display = 'flex';
+
                 map
                     .getSource("OverpassAPI")
                     .setData({ type: "FeatureCollection", features: [] });
@@ -137,9 +174,17 @@
                 const res = await r.json();
 
                 map.getSource("OverpassAPI").setData(res.data);
+
+                loading = false;
+                loadingModal.style.display = 'none';
             }
 
             document.querySelector('#run-button').onclick = run;
+            document.addEventListener('keydown', (event) => {
+                if((event.ctrlKey || event.metaKey) && event.key == "Enter") {
+                    run();
+                }
+            });
 
             map.on("style.load", () => {
                 if (!map.getSource("OverpassAPI")) {
@@ -147,6 +192,50 @@
                         type: "geojson",
                         data: { type: "FeatureCollection", features: [] },
                     });
+
+                    let justOpenedPopup = false;
+
+                    const openPopup = (e) => {
+                        // debounce so we dont open two popups at once with the same click
+                        if (justOpenedPopup) return;
+                        justOpenedPopup = true;
+                        setTimeout(() => justOpenedPopup = false, 100);
+
+                        const f = e.features[0];
+                        const coordinates = f.geometry.coordinates.slice();
+
+                        // Ensure that if the map is zoomed out such that multiple
+                        // copies of the feature are visible, the popup appears
+                        // over the copy being pointed to.
+                        while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
+                            coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
+                        }
+
+                        const props = Object.entries(f.properties)
+                            .map(([k, v]) => `${k}=${v}`)
+                            .join('<br>');
+
+                        const html = `<a href="//www.openstreetmap.org/node/${f.id}" target="_blank">${f.id}</a><br/>
+                        ${props}<br/>
+                        <a href="https://google.com/maps?q=${e.lngLat.lat},${e.lngLat.lng}" target="_blank">google maps</a>
+                        `;
+
+                        new maplibregl.Popup()
+                            .setLngLat(e.lngLat)
+                            .setHTML(html)
+                            .addTo(map)
+                            .on('close', () => map.setFeatureState(
+                                {source: 'OverpassAPI', id: f.id},
+                                {hover: false}
+                            ));
+
+                        // highlight the current thing
+                        map.setFeatureState(
+                            {source: 'OverpassAPI', id: f.id},
+                            {hover: true}
+                        );
+                    };
+
                     const layers = [
                         {
                             id: "overpass-polygons",
@@ -171,7 +260,13 @@
                             filter: ["all", ["==", ["geometry-type"], "LineString"]],
                             paint: {
                                 "line-width": 5,
-                                "line-color": "rgba(0, 51, 255, 0.6)",
+                                "line-color": [
+                                    'case',
+                                    ['boolean', ['feature-state', 'hover'], false],
+                                    "rgba(200, 51, 255, 0.6)",
+                                    "rgba(0, 51, 255, 0.6)",
+                                ]
+
                             },
                             layout: { "line-cap": "round" },
                         },
@@ -190,6 +285,10 @@
                     for (const layer of layers) {
                         if (!map.getLayer(layer)) {
                             map.addLayer(layer);
+
+                            map.on('click', layer.id, openPopup);
+                            map.on('mouseenter', layer.id, () => {map.getCanvas().style.cursor = 'pointer';});
+                            map.on('mouseleave', layer.id, () => {map.getCanvas().style.cursor = '';});
                         }
                     }
                 }

@@ -62,7 +62,7 @@ async fn search(Json(json): Json<SearchParams>) -> Json<SearchResults> {
     let client = reqwest::Client::new();
     let res: Osm = client
         .post("https://overpass-api.de/api/interpreter")
-        .body(dbg!(query))
+        .body(query)
         .send()
         .await
         .unwrap()

@@ -45,18 +45,38 @@
                 height: calc(100vh - var(--header-height));
             }
 
-            #code-container {
+            #left {
                 width: 30%;
                 height: calc(100vh - var(--header-height));
+
+                display: flex;
+                flex-direction: column;
+                justify-content: space-evenly;
             }
 
+            #results {
+                min-height: 7rem;
+                padding: 1rem;
+            }
+            #results:empty {
+                min-height: 0;
+                padding: 0;
+            }
+
+            #code-container {
+                flex: 1;
+            }
             #code-container > div {
-                height: calc(100vh - var(--header-height));
+                height: 100%;
             }
 
-            #map {
+            #right {
                 width: 70%;
                 height: calc(100vh - var(--header-height));
+            }
+            #map {
+                width: 100%;
+                height: 100%;
             }
 
             .maplibregl-popup {
@@ -118,9 +138,14 @@
             </h1>
         </div>
         <div id="container">
-            <div id="code-container">
+            <div id="left">
+                <div id="code-container">
+                </div>
+                <div id="results"></div>
             </div>
-            <div id="map">
+            <div id="right">
+                <div id="map">
+                </div>
                 <div id="info"> </div>
             </div>
         </div>
@@ -190,6 +215,7 @@
 
 
 
+            let resultsDiv = document.querySelector("#results");
 
             let loading = false;
             let loadingModal = document.querySelector("#loading-modal");
@@ -213,8 +239,12 @@
                         },
                     });
                     const res = await r.json();
+
                     if (r.status == 200) {
                         map.getSource("OverpassAPI").setData(res.data);
+
+                        const areas = res.geocode_areas.map(a => `<a href="//www.openstreetmap.org/${a.ty}/${a.id}" target="_blank" class="osm-link">${a.name}</a><br/>`);
+                        resultsDiv.innerHTML = `<h2>Geocode areas found:</h2>${areas}`;
                     } else {
                         if (res.format == 'xml') {
                             const dom = new window.DOMParser().parseFromString(
@@ -281,10 +311,10 @@
                             .join('<br>');
 
                         const html = `<a href="//www.openstreetmap.org/node/${f.id}" target="_blank" class="osm-link">${f.id}</a><br/><br/>
-                        ${props}<br/><br/>
-                        <a href="https://google.co.uk/maps?q=${e.lngLat.lat},${e.lngLat.lng}" target="_blank" class="map-link">google maps</a><br/>
-                        <a href="javascript:navigator.clipboard.writeText('${e.lngLat.lat},${e.lngLat.lng}')" class="map-link">copy</a>
-                        `;
+                            ${props}<br/><br/>
+                            <a href="https://google.co.uk/maps?q=${e.lngLat.lat},${e.lngLat.lng}" target="_blank" class="map-link">google maps</a><br/>
+                            <a href="javascript:navigator.clipboard.writeText('${e.lngLat.lat},${e.lngLat.lng}')" class="map-link">copy</a>
+                            `;
 
                         new maplibregl.Popup()
                             .setLngLat(e.lngLat)
@@ -360,7 +390,7 @@
 
                 map.on('mousemove', (e) => {
                     document.getElementById('info').innerHTML = `${e.lngLat.wrap().lat.toFixed(8)},${e.lngLat.wrap().lng.toFixed(8)}`;
-                });
+                        });
 
                 map.on("moveend", () => {
                     window.localStorage.setItem("viewport", JSON.stringify([

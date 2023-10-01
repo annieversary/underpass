@@ -58,7 +58,16 @@ struct SearchParams {
 struct SearchResults {
     data: geojson::GeoJson,
     query: String,
+    geocode_areas: Vec<GeocodeaArea>,
 }
+
+#[derive(Serialize)]
+pub struct GeocodeaArea {
+    id: u64,
+    ty: String,
+    name: String,
+}
+
 #[derive(Error, Debug)]
 enum SearchError {
     #[error("network error")]
@@ -85,7 +94,7 @@ impl IntoResponse for SearchError {
 }
 
 async fn search(Json(json): Json<SearchParams>) -> Result<Json<SearchResults>, SearchError> {
-    let query = preprocess_query(json.query, &json.bbox).await?;
+    let (query, geocode_areas) = preprocess_query(json.query, &json.bbox).await?;
 
     let client = reqwest::Client::new();
     let res = client
@@ -99,12 +108,10 @@ async fn search(Json(json): Json<SearchParams>) -> Result<Json<SearchResults>, S
 
         let geojson = osm_to_geojson(res);
 
-        // TODO further process the data
-        // we will probably need to construct a set of filters that will then process this data
-
         Ok(Json(SearchResults {
             data: geojson,
             query,
+            geocode_areas,
         }))
     } else {
         let res = res.text().await?;
@@ -112,7 +119,12 @@ async fn search(Json(json): Json<SearchParams>) -> Result<Json<SearchResults>, S
     }
 }
 
-async fn preprocess_query(query: String, bbox: &Bbox) -> Result<String, SearchError> {
+async fn preprocess_query(
+    query: String,
+    bbox: &Bbox,
+) -> Result<(String, Vec<GeocodeaArea>), SearchError> {
+    let mut geocode_areas = vec![];
+
     let re = Regex::new(r"\{\{\s*(\S+):([\S\s]+)?\}\}").unwrap();
 
     let mut new = String::with_capacity(query.len());
@@ -121,13 +133,16 @@ async fn preprocess_query(query: String, bbox: &Bbox) -> Result<String, SearchEr
         let m = caps.get(0).unwrap();
         new.push_str(&query[last_match..m.start()]);
 
-        // TODO replacement
         let replacement = match &caps[1] {
             "bbox" => format!(
                 "{},{},{},{}",
                 bbox.sw[0], bbox.sw[1], bbox.ne[0], bbox.ne[1]
             ),
-            "geocodeArea" => nominatim_search(caps[2].trim()).await?,
+            "geocodeArea" => {
+                let (id, area) = nominatim_search(caps[2].trim()).await?;
+                geocode_areas.push(id);
+                area
+            }
             _ => caps[0].to_string(),
         };
 
@@ -136,10 +151,11 @@ async fn preprocess_query(query: String, bbox: &Bbox) -> Result<String, SearchEr
     }
     new.push_str(&query[last_match..]);
 
-    Ok(new)
+    Ok((new, geocode_areas))
 }
 
-async fn nominatim_search(search: &str) -> Result<String, SearchError> {
+/// returns ($id,area(id:$id))
+async fn nominatim_search(search: &str) -> Result<(GeocodeaArea, String), SearchError> {
     let client = reqwest::Client::new();
     let res = client
         .get(format!(
@@ -154,7 +170,7 @@ async fn nominatim_search(search: &str) -> Result<String, SearchError> {
         .as_array()
         .ok_or_else(|| SearchError::Nominatim("response was not an array".to_string()))?;
     if let Some(serde_json::Value::Object(obj)) = arr.get(0) {
-        let mut id = obj
+        let orig_id = obj
             .get("osm_id")
             .ok_or_else(|| {
                 SearchError::Nominatim("nominatim response did not contain osm_id".to_string())
@@ -170,9 +186,19 @@ async fn nominatim_search(search: &str) -> Result<String, SearchError> {
             })?
             .as_str()
             .ok_or_else(|| SearchError::Nominatim("osm_type was not a string".to_string()))?;
+        let name = obj
+            .get("display_name")
+            .ok_or_else(|| {
+                SearchError::Nominatim(
+                    "nominatim response did not contain display_name".to_string(),
+                )
+            })?
+            .as_str()
+            .ok_or_else(|| SearchError::Nominatim("display_name was not a string".to_string()))?;
 
         // https://github.com/tyrasd/overpass-turbo/blob/eb216aa08b06590a4efc4e10d6a25140d53fcf70/js/shortcuts.ts#L92
 
+        let mut id = orig_id;
         if ty == "relation" {
             id += 3600000000;
         }
@@ -183,7 +209,14 @@ async fn nominatim_search(search: &str) -> Result<String, SearchError> {
             format!("{id}")
         };
 
-        Ok(format!("area(id:{})", id))
+        Ok((
+            GeocodeaArea {
+                id: orig_id,
+                ty: ty.to_string(),
+                name: name.to_string(),
+            },
+            format!("area(id:{})", id),
+        ))
     } else {
         Err(SearchError::Nominatim(format!(
             "no results found for {search}"

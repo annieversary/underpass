@@ -20,16 +20,23 @@
             #header {
                 height: var(--header-height);
                 width: 100%;
+                display:flex;
+                justify-content: space-between;
+                align-items:center;
             }
 
-            #run-button {
+            #run-button, #clear-button {
                 font-size: 2rem;
                 border-radius: 0;
                 border: none;
                 color: white;
-                background-color: #48c774;
+                background-color: var(--button-color, #48c774);
                 cursor: pointer;
                 height: var(--header-height);
+            }
+
+            #clear-button {
+                --button-color: grey;
             }
 
             #container {
@@ -39,7 +46,7 @@
             }
 
             #code-container {
-                width: 40%;
+                width: 30%;
                 height: calc(100vh - var(--header-height));
             }
 
@@ -48,7 +55,7 @@
             }
 
             #map {
-                width: 60%;
+                width: 70%;
                 height: calc(100vh - var(--header-height));
             }
 
@@ -97,11 +104,18 @@
     </head>
     <body>
         <div id="header">
-            <button id="run-button">
-                Run
-            </button>
+            <div style="display:flex;">
+                <button id="run-button">
+                    Run
+                </button>
+                <button id="clear-button">
+                    Clear
+                </button>
+            </div>
 
-            Underpass
+            <h1>
+                Underpass
+            </h1>
         </div>
         <div id="container">
             <div id="code-container">
@@ -212,6 +226,11 @@
                     run();
                 }
             });
+
+            document.querySelector('#clear-button').onclick = () => {
+                map.getSource("OverpassAPI")
+                   .setData({ type: "FeatureCollection", features: [] });
+            };
 
             map.on("style.load", () => {
                 if (!map.getSource("OverpassAPI")) {

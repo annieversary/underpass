@@ -29,6 +29,7 @@
                 color: white;
                 background-color: #48c774;
                 cursor: pointer;
+                height: var(--header-height);
             }
 
             #container {
@@ -99,6 +100,8 @@
             <button id="run-button">
                 Run
             </button>
+
+            Underpass
         </div>
         <div id="container">
             <div id="code-container">
@@ -115,6 +118,10 @@
         </div>
 
         <script>
+            let [zoom, lat, lng] = JSON.parse(window.localStorage.getItem("viewport")) || [
+                16, 51.945356463918586, -0.0175273074135589,
+            ];
+
             const map = new maplibregl.Map({
                 container: 'map',
                 style: 'https://demotiles.maplibre.org/style.json',
@@ -140,9 +147,8 @@
                         }
                     ]
                 },
-
-                center: [-0.0175273074135589,51.945356463918586,],
-                zoom: 15
+                center: [lng, lat],
+                zoom
             });
 
             var editor = CodeMirror(document.getElementById("code-container"), {
@@ -154,7 +160,11 @@
                 mode: "htmlmixed",
             });
 
-            editor.setValue('[out:json][timeout:25];\n\n(way["highway"]({{bbox}}););\n\nout;>;out skel qt;');
+            const query = window.localStorage.getItem('query') || '[out:json][timeout:25];\n\n(way["highway"]({{bbox}}););\n\nout;>;out skel qt;';
+            editor.setValue(query);
+            editor.on('change', function () {
+                window.localStorage.setItem('query', editor.getValue());
+            });
 
             function mapBounds() {
                 const b = map.getBounds();
@@ -312,6 +322,12 @@
 
                 map.on('mousemove', (e) => {
                     document.getElementById('info').innerHTML = `${e.lngLat.wrap().lat.toFixed(8)},${e.lngLat.wrap().lng.toFixed(8)}`;
+                });
+
+                map.on("moveend", () => {
+                    window.localStorage.setItem("viewport", JSON.stringify([
+                        map.getZoom(0), map.getCenter().lat.toFixed(8), map.getCenter().lng.toFixed(8),
+                    ]));
                 });
             });
         </script>

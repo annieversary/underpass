@@ -198,23 +198,42 @@
                 loading = true;
                 loadingModal.style.display = 'flex';
 
-                map
-                    .getSource("OverpassAPI")
+                map.getSource("OverpassAPI")
                     .setData({ type: "FeatureCollection", features: [] });
 
-                const r = await fetch('/search', {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        query: editor.getValue(),
-                        bbox: mapBounds(),
-                    }),
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                });
-                const res = await r.json();
-
-                map.getSource("OverpassAPI").setData(res.data);
+                try {
+                    const r = await fetch('/search', {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            query: editor.getValue(),
+                            bbox: mapBounds(),
+                        }),
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                    });
+                    const res = await r.json();
+                    if (r.status == 200) {
+                        map.getSource("OverpassAPI").setData(res.data);
+                    } else {
+                        if (res.format == 'xml') {
+                            const dom = new window.DOMParser().parseFromString(
+                                res.error,
+                                "text/xml"
+                            );
+                            alert(
+                                Array.from(dom.body.querySelectorAll("p"))
+                                     .slice(1)
+                                     .map((p) => p.textContent)
+                                     .join("\n")
+                            );
+                        } else {
+                            alert(res.error);
+                        }
+                    }
+                } catch (e) {
+                    console.log(e);
+                }
 
                 loading = false;
                 loadingModal.style.display = 'none';

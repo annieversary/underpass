@@ -1,13 +1,16 @@
 use std::fs::read_to_string;
 
 use axum::{
-    response::{Html, Json},
+    response::{Html, IntoResponse, Json},
     routing::{get, post},
     Router,
 };
 use muxa::errors::*;
 use osm_to_geojson::Osm;
+use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
+use serde_json::json;
+use thiserror::Error;
 
 use crate::osm_to_geojson::osm_to_geojson;
 
@@ -54,28 +57,53 @@ struct SearchParams {
 struct SearchResults {
     data: geojson::GeoJson,
 }
+#[derive(Error, Debug)]
+enum SearchError {
+    #[error("network error")]
+    Network(#[from] reqwest::Error),
+    #[error("json parse error")]
+    JsonParse(reqwest::Error),
+    #[error("{0}")]
+    Syntax(String),
+}
 
-// TODO add error handling
-async fn search(Json(json): Json<SearchParams>) -> Json<SearchResults> {
+impl IntoResponse for SearchError {
+    fn into_response(self) -> axum::response::Response {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({
+                "error": format!("{self}"),
+                "format": if matches!(self, Self::Syntax(..)) { "xml" } else { "text" },
+            })),
+        )
+            .into_response()
+    }
+}
+
+async fn search(Json(json): Json<SearchParams>) -> Result<Json<SearchResults>, SearchError> {
     let query = preprocess_query(json.query, &json.bbox);
 
     let client = reqwest::Client::new();
-    let res: Osm = client
+
+    let res = client
         .post("https://overpass-api.de/api/interpreter")
         .body(query)
         .send()
-        .await
-        .unwrap()
-        .json()
-        .await
-        .unwrap();
+        .await?;
 
-    let geojson = osm_to_geojson(res);
+    if res.status() == 200 {
+        let res: Osm = res.json().await.map_err(SearchError::JsonParse)?;
 
-    // TODO further process the data
-    // we will probably need to construct a set of filters that will then process this data
+        let geojson = osm_to_geojson(res);
 
-    Json(SearchResults { data: geojson })
+        // TODO further process the data
+        // we will probably need to construct a set of filters that will then process this data
+
+        Ok(Json(SearchResults { data: geojson }))
+    } else {
+        let res = res.text().await?;
+        Err(SearchError::Syntax(res))
+    }
 }
 
 fn preprocess_query(query: String, bbox: &Bbox) -> String {

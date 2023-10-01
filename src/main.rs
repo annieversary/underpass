@@ -7,6 +7,7 @@ use axum::{
 };
 use muxa::errors::*;
 use osm_to_geojson::Osm;
+use regex::Regex;
 use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -56,6 +57,7 @@ struct SearchParams {
 #[derive(Serialize)]
 struct SearchResults {
     data: geojson::GeoJson,
+    query: String,
 }
 #[derive(Error, Debug)]
 enum SearchError {
@@ -65,6 +67,8 @@ enum SearchError {
     JsonParse(reqwest::Error),
     #[error("{0}")]
     Syntax(String),
+    #[error("Nominatim: {0}")]
+    Nominatim(String),
 }
 
 impl IntoResponse for SearchError {
@@ -81,13 +85,12 @@ impl IntoResponse for SearchError {
 }
 
 async fn search(Json(json): Json<SearchParams>) -> Result<Json<SearchResults>, SearchError> {
-    let query = preprocess_query(json.query, &json.bbox);
+    let query = preprocess_query(json.query, &json.bbox).await?;
 
     let client = reqwest::Client::new();
-
     let res = client
         .post("https://overpass-api.de/api/interpreter")
-        .body(query)
+        .body(query.clone())
         .send()
         .await?;
 
@@ -99,23 +102,91 @@ async fn search(Json(json): Json<SearchParams>) -> Result<Json<SearchResults>, S
         // TODO further process the data
         // we will probably need to construct a set of filters that will then process this data
 
-        Ok(Json(SearchResults { data: geojson }))
+        Ok(Json(SearchResults {
+            data: geojson,
+            query,
+        }))
     } else {
         let res = res.text().await?;
         Err(SearchError::Syntax(res))
     }
 }
 
-fn preprocess_query(query: String, bbox: &Bbox) -> String {
-    // TODO process query, do rewriting
+async fn preprocess_query(query: String, bbox: &Bbox) -> Result<String, SearchError> {
+    let re = Regex::new(r"\{\{\s*(\S+):([\S\s]+)?\}\}").unwrap();
 
-    // TODO geocode area https://github.com/tyrasd/overpass-turbo/blob/eb216aa08b06590a4efc4e10d6a25140d53fcf70/js/shortcuts.ts#L92
+    let mut new = String::with_capacity(query.len());
+    let mut last_match = 0;
+    for caps in re.captures_iter(&query) {
+        let m = caps.get(0).unwrap();
+        new.push_str(&query[last_match..m.start()]);
 
-    query.replace(
-        "{{bbox}}",
-        &format!(
-            "{},{},{},{}",
-            bbox.sw[0], bbox.sw[1], bbox.ne[0], bbox.ne[1]
-        ),
-    )
+        // TODO replacement
+        let replacement = match &caps[1] {
+            "bbox" => format!(
+                "{},{},{},{}",
+                bbox.sw[0], bbox.sw[1], bbox.ne[0], bbox.ne[1]
+            ),
+            "geocodeArea" => nominatim_search(caps[2].trim()).await?,
+            _ => caps[0].to_string(),
+        };
+
+        new.push_str(&replacement);
+        last_match = m.end();
+    }
+    new.push_str(&query[last_match..]);
+
+    Ok(new)
+}
+
+async fn nominatim_search(search: &str) -> Result<String, SearchError> {
+    let client = reqwest::Client::new();
+    let res = client
+        .get(format!(
+            "https://nominatim.openstreetmap.org/search?format=jsonv2&q={search}"
+        ))
+        .header("User-Agent", "Underpass, annie@bursary.town")
+        .send()
+        .await?;
+
+    let res: serde_json::Value = res.json().await?;
+    let arr = res
+        .as_array()
+        .ok_or_else(|| SearchError::Nominatim("response was not an array".to_string()))?;
+    if let Some(serde_json::Value::Object(obj)) = arr.get(0) {
+        let mut id = obj
+            .get("osm_id")
+            .ok_or_else(|| {
+                SearchError::Nominatim("nominatim response did not contain osm_id".to_string())
+            })?
+            .as_number()
+            .ok_or_else(|| SearchError::Nominatim("osm_id was not a number".to_string()))?
+            .as_u64()
+            .ok_or_else(|| SearchError::Nominatim("osm_id was not a u64".to_string()))?;
+        let ty = obj
+            .get("osm_type")
+            .ok_or_else(|| {
+                SearchError::Nominatim("nominatim response did not contain osm_type".to_string())
+            })?
+            .as_str()
+            .ok_or_else(|| SearchError::Nominatim("osm_type was not a string".to_string()))?;
+
+        // https://github.com/tyrasd/overpass-turbo/blob/eb216aa08b06590a4efc4e10d6a25140d53fcf70/js/shortcuts.ts#L92
+
+        if ty == "relation" {
+            id += 3600000000;
+        }
+
+        let id = if ty == "way" {
+            format!("{},{id}", id + 2400000000)
+        } else {
+            format!("{id}")
+        };
+
+        Ok(format!("area(id:{})", id))
+    } else {
+        Err(SearchError::Nominatim(format!(
+            "no results found for {search}"
+        )))
+    }
 }

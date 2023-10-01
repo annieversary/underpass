@@ -15,10 +15,7 @@ pub fn osm_to_geojson(osm: Osm) -> GeoJson {
     let features = osm
         .elements
         .into_iter()
-        .map(|el| Feature {
-            geometry: Some(element_to_geometry(el, &node_map)),
-            ..Default::default()
-        })
+        .map(|el| element_to_feature(&el, &node_map))
         .collect();
 
     GeoJson::FeatureCollection(FeatureCollection {
@@ -28,18 +25,36 @@ pub fn osm_to_geojson(osm: Osm) -> GeoJson {
     })
 }
 
-fn element_to_geometry(el: Element, node_map: &BTreeMap<u64, Vec<f64>>) -> Geometry {
+fn element_to_feature(el: &Element, node_map: &BTreeMap<u64, Vec<f64>>) -> Feature {
+    let mut feat = Feature {
+        id: Some(feature::Id::Number(el.id().into())),
+        geometry: Some(element_to_geometry(el, node_map)),
+        ..Default::default()
+    };
+
+    // TODO probably change some lines to polygons
+    // > an heuristic has to be applied to determine whether a way is a Line or a Polygon
+    // https://wiki.openstreetmap.org/wiki/Overpass_turbo/Polygon_Features
+
+    if let Some(serde_json::Value::Object(obj)) = el.tags() {
+        feat.properties = Some(obj.clone());
+    }
+
+    feat
+}
+
+fn element_to_geometry(el: &Element, node_map: &BTreeMap<u64, Vec<f64>>) -> Geometry {
     match el {
         Element::Node(node) => Value::Point(vec![node.lon, node.lat]),
         Element::Way(way) => Value::LineString(
             way.nodes
-                .into_iter()
-                .filter_map(|id| node_map.get(&id).cloned())
+                .iter()
+                .filter_map(|id| node_map.get(id).cloned())
                 .collect(),
         ),
         Element::Relation(rel) => Value::GeometryCollection(
             rel.members
-                .into_iter()
+                .iter()
                 .map(|el| element_to_geometry(el, node_map))
                 .collect(),
         ),
@@ -65,6 +80,7 @@ pub struct Node {
     pub id: u64,
     pub lat: f64,
     pub lon: f64,
+    pub tags: Option<serde_json::Value>,
 }
 
 /// A way is an ordered list of nodes.
@@ -74,7 +90,7 @@ pub struct Node {
 pub struct Way {
     pub id: u64,
     pub nodes: Vec<u64>,
-    pub tags: serde_json::Value, // if needed, std::collections::HashMap<String, String>
+    pub tags: Option<serde_json::Value>,
 }
 
 /// A way is an ordered list of nodes.
@@ -83,7 +99,7 @@ pub struct Way {
 #[derive(Debug, PartialEq, Clone, Deserialize)]
 pub struct Relation {
     pub id: u64,
-    pub tags: serde_json::Value, // if needed, std::collections::HashMap<String, String>
+    pub tags: Option<serde_json::Value>,
 
     pub members: Vec<Element>,
 }
@@ -96,4 +112,22 @@ pub enum Element {
     Node(Node),
     Way(Way),
     Relation(Relation),
+}
+
+impl Element {
+    fn tags(&self) -> Option<&serde_json::Value> {
+        match self {
+            Element::Node(n) => n.tags.as_ref(),
+            Element::Way(n) => n.tags.as_ref(),
+            Element::Relation(n) => n.tags.as_ref(),
+        }
+    }
+
+    fn id(&self) -> u64 {
+        match self {
+            Element::Node(n) => n.id,
+            Element::Way(n) => n.id,
+            Element::Relation(n) => n.id,
+        }
+    }
 }

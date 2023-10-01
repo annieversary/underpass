@@ -52,8 +52,16 @@
             }
 
             .maplibregl-popup {
-                max-width: 400px;
+                max-width: none !important;
                 font: 12px/20px 'Helvetica Neue', Arial, Helvetica, sans-serif;
+            }
+
+            .maplibregl-popup .maplibregl-popup-content {
+                padding: 2rem;
+            }
+
+            .maplibregl-popup .osm-link {
+                font-size: 1.4rem;
             }
 
             #loading-modal {
@@ -212,12 +220,12 @@
                         }
 
                         const props = Object.entries(f.properties)
-                            .map(([k, v]) => `${k}=${v}`)
+                            .map(([k, v]) => `${k} = ${v}`)
                             .join('<br>');
 
-                        const html = `<a href="//www.openstreetmap.org/node/${f.id}" target="_blank">${f.id}</a><br/>
-                        ${props}<br/>
-                        <a href="https://google.com/maps?q=${e.lngLat.lat},${e.lngLat.lng}" target="_blank">google maps</a>
+                        const html = `<a href="//www.openstreetmap.org/node/${f.id}" target="_blank" class="osm-link">${f.id}</a><br/><br/>
+                        ${props}<br/><br/>
+                        <a href="https://google.co.uk/maps?q=${e.lngLat.lat},${e.lngLat.lng}" target="_blank" class="map-link">google maps</a>
                         `;
 
                         new maplibregl.Popup()
@@ -226,13 +234,13 @@
                             .addTo(map)
                             .on('close', () => map.setFeatureState(
                                 {source: 'OverpassAPI', id: f.id},
-                                {hover: false}
+                                {selected: false}
                             ));
 
                         // highlight the current thing
                         map.setFeatureState(
                             {source: 'OverpassAPI', id: f.id},
-                            {hover: true}
+                            {selected: true}
                         );
                     };
 
@@ -262,8 +270,7 @@
                                 "line-width": 5,
                                 "line-color": [
                                     'case',
-                                    ['boolean', ['feature-state', 'hover'], false],
-                                    "rgba(200, 51, 255, 0.6)",
+                                    ['boolean', ['feature-state', 'selected'], false], "rgba(200, 51, 255, 0.6)",
                                     "rgba(0, 51, 255, 0.6)",
                                 ]
 

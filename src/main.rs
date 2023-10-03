@@ -96,6 +96,8 @@ impl IntoResponse for SearchError {
 async fn search(Json(json): Json<SearchParams>) -> Result<Json<SearchResults>, SearchError> {
     let (query, geocode_areas) = preprocess_query(json.query, &json.bbox).await?;
 
+    dbg!(&query);
+
     let client = reqwest::Client::new();
     let res = client
         .post("https://overpass-api.de/api/interpreter")
@@ -125,7 +127,7 @@ async fn preprocess_query(
 ) -> Result<(String, Vec<GeocodeaArea>), SearchError> {
     let mut geocode_areas = vec![];
 
-    let re = Regex::new(r"\{\{\s*(\S+):([\S\s]+)?\}\}").unwrap();
+    let re = Regex::new(r"\{\{\s*(\S+):?([\S\s]+)?\}\}").unwrap();
 
     let mut new = String::with_capacity(query.len());
     let mut last_match = 0;

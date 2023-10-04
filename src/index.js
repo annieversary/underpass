@@ -155,7 +155,9 @@ map.on("style.load", () => {
 
             const html = `<a href="//www.openstreetmap.org/node/${f.id}" target="_blank" class="osm-link">${f.id}</a><br/><br/>
             ${props}<br/><br/>
-            <a href="https://google.co.uk/maps?q=${e.lngLat.lat},${e.lngLat.lng}" target="_blank" class="map-link">google maps</a><br/>
+            <a href="https://google.co.uk/maps?q=${e.lngLat.lat},${e.lngLat.lng}" target="_blank" class="map-link"
+                onclick="map.setFeatureState({source: 'OverpassAPI', id: ${f.id}}, {visited: true}); "
+            >google maps</a><br/>
             <a href="javascript:navigator.clipboard.writeText('${e.lngLat.lat},${e.lngLat.lng}')" class="map-link">copy</a>
             `;
 
@@ -174,6 +176,14 @@ map.on("style.load", () => {
                 {selected: true}
             );
         };
+
+        function openContextMenu(e) {
+            const f = e.features[0];
+            map.setFeatureState(
+                {source: 'OverpassAPI', id: f.id},
+                {visited: !f.state.visited}
+            );
+        }
 
         const layers = [
             {
@@ -202,6 +212,7 @@ map.on("style.load", () => {
                     "line-color": [
                         'case',
                         ['boolean', ['feature-state', 'selected'], false], "rgba(200, 51, 255, 0.6)",
+                        ['boolean', ['feature-state', 'visited'], false], "rgba(0, 204, 200, 0.6)",
                         "rgba(0, 51, 255, 0.6)",
                     ]
 
@@ -216,7 +227,11 @@ map.on("style.load", () => {
                 paint: {
                     "circle-stroke-width": 2,
                     "circle-stroke-color": "rgba(0, 51, 255, 0.6)",
-                    "circle-color": "rgba(255, 204, 0, 0.6)",
+                    "circle-color": [
+                        'case',
+                        ['boolean', ['feature-state', 'visited'], false], "rgba(0, 204, 200, 0.6)",
+                        "rgba(250, 204, 0, 0.6)",
+                    ]
                 },
             },
         ];
@@ -227,6 +242,8 @@ map.on("style.load", () => {
                 map.on('click', layer.id, openPopup);
                 map.on('mouseenter', layer.id, () => {map.getCanvas().style.cursor = 'pointer';});
                 map.on('mouseleave', layer.id, () => {map.getCanvas().style.cursor = '';});
+
+                map.on('contextmenu', layer.id, openContextMenu);
             }
         }
     }

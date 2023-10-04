@@ -153,7 +153,10 @@ map.on("style.load", () => {
                                 .map(([k, v]) => `${k} = ${v}`)
                                 .join('<br>');
 
-            const html = `<a href="//www.openstreetmap.org/node/${f.id}" target="_blank" class="osm-link">${f.id}</a><br/><br/>
+            // this is not accurate but good enough
+            const type = f.layer.type == 'fill' ? 'relation' : (f.layer.type == 'line' ? 'way' : 'node');
+
+            const html = `<a href="//www.openstreetmap.org/${type}/${f.id}" target="_blank" class="osm-link">${f.id}</a><br/><br/>
             ${props}<br/><br/>
             <a href="https://google.co.uk/maps?q=${e.lngLat.lat},${e.lngLat.lng}" target="_blank" class="map-link"
                 onclick="map.setFeatureState({source: 'OverpassAPI', id: ${f.id}}, {visited: true}); "

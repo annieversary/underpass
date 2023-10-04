@@ -22,6 +22,8 @@ async fn main() {
     // build our application with a single route
     let app = Router::new()
         .route("/", get(home))
+        .route("/style.css", get(css))
+        .route("/index.js", get(js))
         .route("/search", post(search));
 
     #[cfg(debug_assertions)]
@@ -40,6 +42,18 @@ async fn home() -> Result<Html<String>, ErrResponse> {
         .map(Html)
 
     // Html(include_str!("index.html"))
+}
+
+async fn css() -> Result<([(&'static str, &'static str); 1], String), ErrResponse> {
+    read_to_string("./src/style.css")
+        .map_err(internal_error)
+        .map(|a| ([("content-type", "text/css")], a))
+}
+
+async fn js() -> Result<([(&'static str, &'static str); 1], String), ErrResponse> {
+    read_to_string("./src/index.js")
+        .map_err(internal_error)
+        .map(|a| ([("content-type", "text/javascript")], a))
 }
 
 #[derive(Deserialize)]

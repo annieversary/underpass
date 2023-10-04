@@ -117,10 +117,22 @@
                 bottom: 0;
             }
 
+            #tools {
+                z-index: 1000;
+                position: absolute;
+                top: var(--header-height);
+            }
+            #distance-button {
+                background: grey;
+            }
+            #distance-button[data-on="true"] {
+                background: #a8e6a8;
+            }
         </style>
 
         <script src='https://unpkg.com/maplibre-gl@3.3.1/dist/maplibre-gl.js'></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/codemirror.min.js" integrity="sha512-8RnEqURPUc5aqFEN04aQEiPlSAdE0jlFS/9iGgUyNtwFnSKCXhmB6ZTNl7LnDtDWKabJIASzXrzD0K+LYexU9g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+        <script src="https://npmcdn.com/@turf/turf@5.1.6/turf.min.js"></script>
     </head>
     <body>
         <div id="header">
@@ -146,7 +158,12 @@
             <div id="right">
                 <div id="map">
                 </div>
-                <div id="info"> </div>
+                <div id="info"></div>
+                <div id="tools">
+                    <button id="distance-button">
+                        distance
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -281,6 +298,8 @@
                    .setData({ type: "FeatureCollection", features: [] });
             };
 
+
+
             map.on("style.load", () => {
                 if (!map.getSource("OverpassAPI")) {
                     map.addSource("OverpassAPI", {
@@ -387,17 +406,131 @@
                         }
                     }
                 }
-
-                map.on('mousemove', (e) => {
-                    document.getElementById('info').innerHTML = `${e.lngLat.wrap().lat.toFixed(8)},${e.lngLat.wrap().lng.toFixed(8)}`;
-                        });
-
-                map.on("moveend", () => {
-                    window.localStorage.setItem("viewport", JSON.stringify([
-                        map.getZoom(0), map.getCenter().lat.toFixed(8), map.getCenter().lng.toFixed(8),
-                    ]));
-                });
             });
+
+
+
+            // corner tooltip with coordinates
+            const infoDiv = document.getElementById('info');
+            map.on('mousemove', (e) => {
+                infoDiv.innerHTML = `${e.lngLat.wrap().lat.toFixed(8)},${e.lngLat.wrap().lng.toFixed(8)}`;
+                if (distance) {
+                    infoDiv.innerHTML += `, Distance: ${distance}m`;
+                }
+            });
+
+            // store viewport position in localstorage
+            map.on("moveend", () => {
+                window.localStorage.setItem("viewport", JSON.stringify([
+                    map.getZoom(0), map.getCenter().lat.toFixed(8), map.getCenter().lng.toFixed(8),
+                ]));
+            });
+
+
+            let distance = null;
+            function setupDistanceMeasure() {
+                map.on('load', () => {
+                    const geojson = {
+                        'type': 'FeatureCollection',
+                        'features': []
+                    };
+                    const linestring = {
+                        'type': 'Feature',
+                        'geometry': {
+                            'type': 'LineString',
+                            'coordinates': []
+                        }
+                    };
+
+                    map.addSource('distance-measure', {
+                        'type': 'geojson',
+                        'data': geojson
+                    });
+
+                    // Add styles to the map
+                    map.addLayer({
+                        id: 'measure-points',
+                        type: 'circle',
+                        source: 'distance-measure',
+                        paint: {
+                            'circle-radius': 5,
+                            'circle-color': '#000'
+                        },
+                        filter: ['in', '$type', 'Point']
+                    });
+                    map.addLayer({
+                        id: 'measure-lines',
+                        type: 'line',
+                        source: 'distance-measure',
+                        layout: {
+                            'line-cap': 'round',
+                            'line-join': 'round'
+                        },
+                        paint: {
+                            'line-color': '#000',
+                            'line-width': 2.5
+                        },
+                        filter: ['in', '$type', 'LineString']
+                    });
+
+
+                    map.on('click', (e) => {
+                        const on = distanceButton.dataset.on == 'true';
+                        if (!on) return;
+
+                        if (geojson.features.length > 1) geojson.features.pop();
+
+                        const point = {
+                            'type': 'Feature',
+                            'geometry': {
+                                'type': 'Point',
+                                'coordinates': [e.lngLat.lng, e.lngLat.lat]
+                            },
+                            'properties': {
+                                'id': String(new Date().getTime())
+                            }
+                        };
+
+                        geojson.features.push(point);
+
+                        if (geojson.features.length > 1) {
+                            linestring.geometry.coordinates = geojson.features.map(
+                                (point) => {
+                                    return point.geometry.coordinates;
+                                }
+                            );
+
+                            geojson.features.push(linestring);
+
+                            distance = (1000 * turf.length(linestring)).toLocaleString();
+                        }
+
+                        map.getSource('distance-measure').setData(geojson);
+                    });
+
+                });
+
+                const distanceButton = document.querySelector('#distance-button');
+                function toggleDistance() {
+                    distanceButton.dataset.on = distanceButton.dataset.on == 'true' ? 'false' : 'true';
+
+                    const on = distanceButton.dataset.on == 'true';
+                    if (!on) {
+                        distance = null;
+                        map.getSource("distance-measure")
+                           .setData({ type: "FeatureCollection", features: [] });
+                        const geojson = {
+                            'type': 'FeatureCollection',
+                            'features': []
+                        };
+                    }
+
+                    map.getCanvas().style.cursor = !on ? 'pointer' : 'crosshair';
+                };
+
+                distanceButton.onclick = toggleDistance;
+            }
+            setupDistanceMeasure();
         </script>
     </body>
 </html>

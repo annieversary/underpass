@@ -7,6 +7,11 @@
 
         <link rel='stylesheet' href='https://unpkg.com/maplibre-gl@3.3.1/dist/maplibre-gl.css' />
         <link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.13.4/codemirror.css'>
+        <link
+            rel="stylesheet"
+            href="https://unpkg.com/@maplibre/maplibre-gl-geocoder@1.2.0/dist/maplibre-gl-geocoder.css"
+            type="text/css"
+        />
         <style>
             :root {
                 --header-height: 4vh;
@@ -133,6 +138,7 @@
         <script src='https://unpkg.com/maplibre-gl@3.3.1/dist/maplibre-gl.js'></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/codemirror.min.js" integrity="sha512-8RnEqURPUc5aqFEN04aQEiPlSAdE0jlFS/9iGgUyNtwFnSKCXhmB6ZTNl7LnDtDWKabJIASzXrzD0K+LYexU9g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
         <script src="https://npmcdn.com/@turf/turf@5.1.6/turf.min.js"></script>
+        <script src="https://unpkg.com/@maplibre/maplibre-gl-geocoder@1.2.0/dist/maplibre-gl-geocoder.min.js"></script>
     </head>
     <body>
         <div id="header">
@@ -242,7 +248,7 @@
                 loadingModal.style.display = 'flex';
 
                 map.getSource("OverpassAPI")
-                    .setData({ type: "FeatureCollection", features: [] });
+                   .setData({ type: "FeatureCollection", features: [] });
 
                 try {
                     const r = await fetch('/search', {
@@ -326,23 +332,23 @@
                         }
 
                         const props = Object.entries(f.properties)
-                            .map(([k, v]) => `${k} = ${v}`)
-                            .join('<br>');
+                                            .map(([k, v]) => `${k} = ${v}`)
+                                            .join('<br>');
 
                         const html = `<a href="//www.openstreetmap.org/node/${f.id}" target="_blank" class="osm-link">${f.id}</a><br/><br/>
-                            ${props}<br/><br/>
-                            <a href="https://google.co.uk/maps?q=${e.lngLat.lat},${e.lngLat.lng}" target="_blank" class="map-link">google maps</a><br/>
-                            <a href="javascript:navigator.clipboard.writeText('${e.lngLat.lat},${e.lngLat.lng}')" class="map-link">copy</a>
-                            `;
+                        ${props}<br/><br/>
+                        <a href="https://google.co.uk/maps?q=${e.lngLat.lat},${e.lngLat.lng}" target="_blank" class="map-link">google maps</a><br/>
+                        <a href="javascript:navigator.clipboard.writeText('${e.lngLat.lat},${e.lngLat.lng}')" class="map-link">copy</a>
+                        `;
 
                         new maplibregl.Popup()
-                            .setLngLat(e.lngLat)
-                            .setHTML(html)
-                            .addTo(map)
-                            .on('close', () => map.setFeatureState(
-                                {source: 'OverpassAPI', id: f.id},
-                                {selected: false}
-                            ));
+                                      .setLngLat(e.lngLat)
+                                      .setHTML(html)
+                                      .addTo(map)
+                                      .on('close', () => map.setFeatureState(
+                                          {source: 'OverpassAPI', id: f.id},
+                                          {selected: false}
+                                      ));
 
                         // highlight the current thing
                         map.setFeatureState(
@@ -517,7 +523,7 @@
                 if (!on) {
                     distance = null;
                     map.getSource("distance-measure")
-                        .setData({ type: "FeatureCollection", features: [] });
+                       .setData({ type: "FeatureCollection", features: [] });
                     distanceMeasureGeojson = {
                         'type': 'FeatureCollection',
                         'features': []
@@ -561,6 +567,56 @@
                 },
                 true
             );
+
+
+
+            // search
+            const geocoderApi = {
+                forwardGeocode: async (config) => {
+                    const features = [];
+                    try {
+                        const request =
+                            `https://nominatim.openstreetmap.org/search?q=${
+                config.query
+            }&format=geojson&polygon_geojson=1&addressdetails=1`;
+                        const response = await fetch(request);
+                        const geojson = await response.json();
+                        for (const feature of geojson.features) {
+                            const center = [
+                                feature.bbox[0] +
+                     (feature.bbox[2] - feature.bbox[0]) / 2,
+                                feature.bbox[1] +
+                     (feature.bbox[3] - feature.bbox[1]) / 2
+                            ];
+                            const point = {
+                                type: 'Feature',
+                                geometry: {
+                                    type: 'Point',
+                                    coordinates: center
+                                },
+                                place_name: feature.properties.display_name,
+                                properties: feature.properties,
+                                text: feature.properties.display_name,
+                                place_type: ['place'],
+                                center
+                            };
+                            features.push(point);
+                        }
+                    } catch (e) {
+                        console.error(`Failed to forwardGeocode with error: ${e}`);
+                    }
+
+                    return {
+                        features
+                    };
+                }
+            };
+            map.addControl(
+                new MaplibreGeocoder(geocoderApi, {
+                    maplibregl
+                })
+            );
+
         </script>
     </body>
 </html>

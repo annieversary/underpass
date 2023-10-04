@@ -12,6 +12,11 @@ mod search;
 
 #[tokio::main]
 async fn main() {
+    // we only care if the error is a line parse
+    if let Err(err @ dotenv::Error::LineParse(..)) = dotenv::dotenv() {
+        panic!("{:?}", err);
+    }
+
     // build our application with a single route
     let app = Router::new()
         .route("/", get(home))
@@ -19,11 +24,16 @@ async fn main() {
         .route("/index.js", get(js))
         .route("/search", post(search::search));
 
+    let port: u16 = std::env::var("PORT")
+        .ok()
+        .and_then(|a| a.parse().ok())
+        .unwrap_or(3000);
+
     #[cfg(debug_assertions)]
-    println!("listening on http://localhost:3000");
+    println!("listening on http://localhost:{port}");
 
     // run it with hyper on localhost:3000
-    axum::Server::bind(&"0.0.0.0:3000".parse().unwrap())
+    axum::Server::bind(&([0, 0, 0, 0], port).into())
         .serve(app.into_make_service())
         .await
         .unwrap();

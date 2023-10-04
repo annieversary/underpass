@@ -1,3 +1,4 @@
+#[cfg(debug_assertions)]
 use std::fs::read_to_string;
 
 use axum::{
@@ -5,7 +6,6 @@ use axum::{
     routing::{get, post},
     Router,
 };
-use muxa::errors::*;
 
 mod osm_to_geojson;
 mod search;
@@ -29,22 +29,31 @@ async fn main() {
         .unwrap();
 }
 
-async fn home() -> Result<Html<String>, ErrResponse> {
-    read_to_string("./src/index.html")
-        .map_err(internal_error)
-        .map(Html)
+async fn home() -> Html<String> {
+    // read file when on debug, embed file when on release
+    // this way we can live edit in local, and dont have to keep the files next to the executable in prod
 
-    // Html(include_str!("index.html"))
+    #[cfg(debug_assertions)]
+    return Html(read_to_string("./src/index.html").unwrap());
+
+    #[cfg(not(debug_assertions))]
+    Html(include_str!("index.html").to_string())
 }
 
-async fn css() -> Result<([(&'static str, &'static str); 1], String), ErrResponse> {
-    read_to_string("./src/style.css")
-        .map_err(internal_error)
-        .map(|a| ([("content-type", "text/css")], a))
+async fn css() -> ([(&'static str, &'static str); 1], String) {
+    #[cfg(debug_assertions)]
+    let a = read_to_string("./src/style.css").unwrap();
+    #[cfg(not(debug_assertions))]
+    let a = include_str!("style.css").to_string();
+
+    ([("content-type", "text/css")], a)
 }
 
-async fn js() -> Result<([(&'static str, &'static str); 1], String), ErrResponse> {
-    read_to_string("./src/index.js")
-        .map_err(internal_error)
-        .map(|a| ([("content-type", "text/javascript")], a))
+async fn js() -> ([(&'static str, &'static str); 1], String) {
+    #[cfg(debug_assertions)]
+    let a = read_to_string("./src/index.js").unwrap();
+    #[cfg(not(debug_assertions))]
+    let a = include_str!("index.js").to_string();
+
+    ([("content-type", "text/css")], a)
 }

@@ -15,7 +15,7 @@ body {
     align-items:center;
 }
 
-#run-button, #clear-button {
+#header button {
     font-size: 2rem;
     border-radius: 0;
     border: none;
@@ -26,6 +26,9 @@ body {
 }
 
 #clear-button {
+    --button-color: grey;
+}
+#export-button {
     --button-color: grey;
 }
 

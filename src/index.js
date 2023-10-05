@@ -122,6 +122,25 @@ document.querySelector('#clear-button').onclick = () => {
         .setData({ type: "FeatureCollection", features: [] });
 };
 
+document.querySelector('#export-button').onclick = () => {
+    const out = map.getSource("OverpassAPI").serialize();
+    if (out.data.features.length == 0) {
+        alert('No data to export!');
+    }
+    download('export.json', out);
+};
+function download(filename, json) {
+    var element = document.createElement('a');
+    element.setAttribute('href', 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(json)));
+    element.setAttribute('download', filename);
+
+    element.style.display = 'none';
+    document.body.appendChild(element);
+
+    element.click();
+
+    document.body.removeChild(element);
+}
 
 
 map.on("style.load", () => {

@@ -108,7 +108,10 @@ async function run() {
 
         resultsDiv.innerHTML = '';
         if (r.status == 200) {
-            map.getSource("OverpassAPI").setData(res.data);
+            const data = res.data;
+            data.features = data.features
+                .filter(f => !(f.geometry.type == "Point" && Object.keys(f.properties).length == 0));
+            map.getSource("OverpassAPI").setData(data);
 
             if (res.geocode_areas.length > 0) {
                 const areas = res.geocode_areas.map(a => `${a.original} - <a href="//www.openstreetmap.org/${a.ty}/${a.id}" target="_blank" class="osm-link">${a.name}</a><br/>`).join('');

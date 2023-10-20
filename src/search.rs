@@ -62,8 +62,6 @@ impl IntoResponse for SearchError {
 pub async fn search(Json(json): Json<SearchParams>) -> Result<Json<SearchResults>, SearchError> {
     let (query, geocode_areas) = preprocess_query(json.query, &json.bbox).await?;
 
-    dbg!(&query);
-
     let client = reqwest::Client::new();
     let res = client
         .post("https://overpass-api.de/api/interpreter")

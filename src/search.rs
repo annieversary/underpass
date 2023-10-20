@@ -92,6 +92,7 @@ async fn preprocess_query(
 ) -> Result<(String, Vec<GeocodeaArea>), SearchError> {
     let mut geocode_areas = vec![];
 
+    // TODO change this to be not eager
     let re = Regex::new(r"\{\{\s*(\w+):?([\S\s]+)?\}\}").unwrap();
 
     let mut new = String::with_capacity(query.len());

@@ -106,11 +106,14 @@ async function run() {
         });
         const res = await r.json();
 
+        resultsDiv.innerHTML = '';
         if (r.status == 200) {
             map.getSource("OverpassAPI").setData(res.data);
 
-            const areas = res.geocode_areas.map(a => `<a href="//www.openstreetmap.org/${a.ty}/${a.id}" target="_blank" class="osm-link">${a.name}</a><br/>`);
-            resultsDiv.innerHTML = `<h2>Geocode areas found:</h2>${areas}`;
+            if (res.geocode_areas.length > 0) {
+                const areas = res.geocode_areas.map(a => `<a href="//www.openstreetmap.org/${a.ty}/${a.id}" target="_blank" class="osm-link">${a.name}</a><br/>`);
+                resultsDiv.innerHTML = `<h2>Geocode areas found:</h2>${areas}`;
+            }
         } else {
             if (res.format == 'xml') {
                 const dom = new window.DOMParser().parseFromString(
@@ -226,6 +229,10 @@ map.on("style.load", () => {
 
         function openContextMenu(e) {
             const f = e.features[0];
+
+            // TODO add [id, 'node|way|relation'] to a "visited" array
+            // we dont have access to either of those things here sadly so idk if its doable
+
             map.setFeatureState(
                 {source: 'OverpassAPI', id: f.id},
                 {visited: !f.state.visited}

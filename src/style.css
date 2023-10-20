@@ -38,6 +38,14 @@ body {
     height: calc(100vh - var(--header-height));
 }
 
+#resizer {
+    width: 3px;
+    background: white;
+}
+#resizer:hover {
+    cursor:col-resize;
+}
+
 #left {
     width: 30%;
     height: calc(100vh - var(--header-height));

@@ -1,3 +1,28 @@
+// resize
+const resizer = document.querySelector("#resizer");
+const left = document.querySelector("#left");
+const right = document.querySelector("#right");
+
+function resize(e) {
+    left.style.width = `${e.x}px`;
+    right.style.width = `${window.innerWidth - e.x}px`;
+    window.localStorage.setItem('codeWidth', e.x);
+}
+
+const codeWidth = window.localStorage.getItem('codeWidth') || (window.innerWidth * 0.3);
+resize({ x: codeWidth });
+
+resizer.addEventListener("mousedown", () => {
+    document.addEventListener("mousemove", resize, false);
+    document.addEventListener("mouseup", () => {
+        document.removeEventListener("mousemove", resize, false);
+    }, false);
+});
+
+
+
+
+
 let [zoom, lat, lng] = JSON.parse(window.localStorage.getItem("viewport")) || [
     16, 51.945356463918586, -0.0175273074135589,
 ];

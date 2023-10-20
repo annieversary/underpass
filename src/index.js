@@ -111,7 +111,7 @@ async function run() {
             map.getSource("OverpassAPI").setData(res.data);
 
             if (res.geocode_areas.length > 0) {
-                const areas = res.geocode_areas.map(a => `<a href="//www.openstreetmap.org/${a.ty}/${a.id}" target="_blank" class="osm-link">${a.name}</a><br/>`);
+                const areas = res.geocode_areas.map(a => `${a.original} - <a href="//www.openstreetmap.org/${a.ty}/${a.id}" target="_blank" class="osm-link">${a.name}</a><br/>`).join('');
                 resultsDiv.innerHTML = `<h2>Geocode areas found:</h2>${areas}`;
             }
         } else {

@@ -31,6 +31,7 @@ pub struct GeocodeaArea {
     id: u64,
     ty: String,
     name: String,
+    original: String,
 }
 
 #[derive(Error, Debug)]
@@ -181,6 +182,7 @@ async fn nominatim_search(search: &str) -> Result<(GeocodeaArea, String), Search
                 id: orig_id,
                 ty: ty.to_string(),
                 name: name.to_string(),
+                original: search.to_string(),
             },
             format!("area(id:{})", id),
         ))

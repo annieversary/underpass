@@ -8,6 +8,7 @@ use axum::{
 };
 
 mod osm_to_geojson;
+mod preprocess;
 mod search;
 
 #[tokio::main]

@@ -37,15 +37,8 @@ pub async fn preprocess_query(
                 let others = internal_id("others");
                 let collect = internal_id("collect");
 
-                indoc::formatdoc!(
-                    "
-                    foreach.{set}->.{it}(
-                        nwr.{set}(around.{it}:{distance})->.{nearby};
-                        (.{nearby}; - .{it};)->.{others};
-                        (.{collect}; .{others};)->.{collect};
-                    );
-                    .{empty}->._;
-                    .{collect}"
+                format!(
+                    "foreach.{set}->.{it}(nwr.{set}(around.{it}:{distance})->.{nearby}; (.{nearby}; - .{it};)->.{others}; (.{collect}; .{others};)->.{collect};); .{empty}->._; .{collect}"
                 )
             }
             _ => caps[0].to_string(),

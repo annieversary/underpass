@@ -65,7 +65,7 @@ var editor = CodeMirror(document.getElementById("code-container"), {
     mode: "htmlmixed",
 });
 
-const query = window.localStorage.getItem('query') || '[out:json][timeout:25];\n\n(way["highway"]({{bbox}}););\n\nout;>;out skel qt;';
+const query = window.localStorage.getItem('query') || '[out:json][timeout:25];\n\nway["highway"]({{bbox}});\n\nout;>;out skel qt;';
 editor.setValue(query);
 editor.on('change', function () {
     window.localStorage.setItem('query', editor.getValue());

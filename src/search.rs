@@ -1,4 +1,5 @@
 use axum::response::{IntoResponse, Json};
+use rand::{distributions::Alphanumeric, Rng};
 use regex::Regex;
 use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
@@ -62,6 +63,8 @@ impl IntoResponse for SearchError {
 pub async fn search(Json(json): Json<SearchParams>) -> Result<Json<SearchResults>, SearchError> {
     let (query, geocode_areas) = preprocess_query(json.query, &json.bbox).await?;
 
+    // println!("{}", &query);
+
     let client = reqwest::Client::new();
     let res = client
         .post("https://overpass-api.de/api/interpreter")
@@ -91,7 +94,8 @@ async fn preprocess_query(
 ) -> Result<(String, Vec<GeocodeaArea>), SearchError> {
     let mut geocode_areas = vec![];
 
-    let re = Regex::new(r"\{\{\s*(\w+):?([\S\s]+?)?\}\}").unwrap();
+    // TODO move the matching part to a separate function so we can add tests and stuff
+    let re = Regex::new(r"\{\{\s*([\w.]+)(:([\S\s]+?))?\}\}").unwrap();
 
     let mut new = String::with_capacity(query.len());
     let mut last_match = 0;
@@ -105,9 +109,39 @@ async fn preprocess_query(
                 bbox.sw[0], bbox.sw[1], bbox.ne[0], bbox.ne[1]
             ),
             "geocodeArea" => {
-                let (id, area) = nominatim_search(caps[2].trim()).await?;
+                let (id, area) = nominatim_search(caps[3].trim()).await?;
                 geocode_areas.push(id);
                 area
+            }
+            m if m.starts_with("aroundSelf.") => {
+                let set = m.trim_start_matches("aroundSelf.");
+                let distance = &caps[3];
+
+                fn internal_id(id: &str) -> String {
+                    let random: String = rand::thread_rng()
+                        .sample_iter(&Alphanumeric)
+                        .take(10)
+                        .map(char::from)
+                        .collect();
+                    format!("internal__{id}_{}", random)
+                }
+
+                let it = internal_id("it");
+                let nearby = internal_id("nearby");
+                let empty = internal_id("empty");
+                let others = internal_id("others");
+                let collect = internal_id("collect");
+
+                indoc::formatdoc!(
+                    "
+                    foreach.{set}->.{it}(
+                        nwr.{set}(around.{it}:{distance})->.{nearby};
+                        (.{nearby}; - .{it};)->.{others};
+                        (.{collect}; .{others};)->.{collect};
+                    );
+                    .{empty}->._;
+                    .{collect}"
+                )
             }
             _ => caps[0].to_string(),
         };

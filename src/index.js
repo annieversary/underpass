@@ -69,6 +69,11 @@ const query = window.localStorage.getItem('query') || '[out:json][timeout:25];\n
 editor.setValue(query);
 editor.on('change', function () {
     window.localStorage.setItem('query', editor.getValue());
+
+    const b = document.getElementById('view-query-button');
+    if (b) {
+        b.remove();
+    }
 });
 
 function mapBounds() {
@@ -117,6 +122,12 @@ async function run() {
                 const areas = res.geocode_areas.map(a => `${a.original} - <a href="//www.openstreetmap.org/${a.ty}/${a.id}" target="_blank" class="osm-link">${a.name}</a><br/>`).join('');
                 resultsDiv.innerHTML = `<h2>Geocode areas found:</h2>${areas}`;
             }
+
+            const button = document.createElement('button');
+            button.innerHTML = 'View query';
+            button.id = 'view-query-button';
+            button.onclick = () => openModal(`<pre>${res.query}</pre>`);
+            document.getElementById('header-buttons').appendChild(button);
         } else {
             if (res.format == 'xml') {
                 const dom = new window.DOMParser().parseFromString(
@@ -508,3 +519,25 @@ map.addControl(
         maplibregl
     })
 );
+
+
+function openModal(content) {
+    const modal = document.createElement('div');
+    modal.classList.add('modal');
+    modal.innerHTML = `
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <div class="modal-inner">
+            ${content}
+        </div>
+    </div>`;
+    document.body.appendChild(modal);
+    modal.querySelector('span.close').onclick = function() {
+        modal.remove();
+    };
+    window.onclick = function(event) {
+        if (event.target == modal) {
+            modal.remove();
+        }
+    };
+}

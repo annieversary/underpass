@@ -26,3 +26,5 @@ node["amenity"="bench"]({{bbox}})->.benches;
 ```
 {{geocodeArea:Hokkaido, Japan; Aomori, Japan}}->.japan;
 ```
+
+`{{out}}` simply expands to `out;>;out skel qt;`

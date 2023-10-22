@@ -18,6 +18,7 @@ pub async fn preprocess_query(
         new.push_str(&query[last_match..m.start()]);
 
         let replacement = match &caps[1] {
+            "out" => "out;>;out skel qt;".to_string(),
             "bbox" => format!(
                 "{},{},{},{}",
                 bbox.sw[0], bbox.sw[1], bbox.ne[0], bbox.ne[1]

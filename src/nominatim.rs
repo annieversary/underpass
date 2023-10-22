@@ -3,17 +3,23 @@ use crate::search::{GeocodeaArea, SearchError};
 #[cfg(test)]
 use mockall::{automock, predicate::*};
 
+#[derive(Clone, Debug)]
+pub struct NominatimOuput {
+    pub ids: Vec<u64>,
+    pub area: GeocodeaArea,
+}
+
 #[cfg_attr(test, automock)]
 #[async_trait::async_trait]
 pub trait Nominatim {
-    async fn search(&self, search: &str) -> Result<(GeocodeaArea, String), SearchError>;
+    async fn search(&self, search: &str) -> Result<NominatimOuput, SearchError>;
 }
 
 pub struct OsmNominatim;
 #[async_trait::async_trait]
 impl Nominatim for OsmNominatim {
     /// returns ($id,area(id:$id))
-    async fn search(&self, search: &str) -> Result<(GeocodeaArea, String), SearchError> {
+    async fn search(&self, search: &str) -> Result<NominatimOuput, SearchError> {
         let client = reqwest::Client::new();
         let res = client
             .get(format!(
@@ -65,23 +71,19 @@ impl Nominatim for OsmNominatim {
                 id += 3600000000;
             }
 
-            // TODO change this to return a vec of ids
-            // preprocess query should be the one to put it in a string
-            let id = if ty == "way" {
-                format!("{},{id}", id + 2400000000)
-            } else {
-                format!("{id}")
-            };
-
-            Ok((
-                GeocodeaArea {
+            Ok(NominatimOuput {
+                ids: if ty == "way" {
+                    vec![id + 2400000000, id]
+                } else {
+                    vec![id]
+                },
+                area: GeocodeaArea {
                     id: orig_id,
                     ty: ty.to_string(),
                     name: name.to_string(),
                     original: search.to_string(),
                 },
-                format!("area(id:{})", id),
-            ))
+            })
         } else {
             Err(SearchError::Nominatim(format!(
                 "no results found for {search}"

@@ -57,7 +57,7 @@ pub struct SearchResults {
     pub geocode_areas: Vec<GeocodeaArea>,
 }
 
-#[derive(Serialize, Default)]
+#[derive(Serialize, Default, Clone, Debug)]
 pub struct GeocodeaArea {
     pub id: u64,
     pub ty: String,

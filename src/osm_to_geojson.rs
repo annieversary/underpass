@@ -131,3 +131,6 @@ impl Element {
         }
     }
 }
+
+// TODO add tests for osm_to_geojson
+// but idk it works well so far and i dont plan on changing it any time soon so im leaving this for later

@@ -1,11 +1,15 @@
 use rand::{distributions::Alphanumeric, Rng};
 use regex::Regex;
 
-use crate::search::{Bbox, GeocodeaArea, SearchError};
+use crate::{
+    nominatim::*,
+    search::{Bbox, GeocodeaArea, SearchError},
+};
 
 pub async fn preprocess_query(
     query: String,
     bbox: &Bbox,
+    nominatim: impl Nominatim,
 ) -> Result<(String, Vec<GeocodeaArea>), SearchError> {
     let mut geocode_areas = vec![];
 
@@ -26,7 +30,7 @@ pub async fn preprocess_query(
             "geocodeArea" => {
                 let mut r = "(".to_string();
                 for s in caps[3].split(';') {
-                    let (id, area) = nominatim_search(s.trim()).await?;
+                    let (id, area) = nominatim.search(s.trim()).await?;
                     geocode_areas.push(id);
                     r.push_str(&area);
                     r.push(';');
@@ -62,7 +66,12 @@ pub async fn preprocess_query(
 /// returns a unique set id in the format
 /// `internal__{id}_{random characters}`
 fn internal_id(id: &str) -> String {
-    let random: String = rand::thread_rng()
+    #[cfg(test)]
+    let rng = rand::rngs::mock::StepRng::new(2, 1);
+    #[cfg(not(test))]
+    let rng = rand::thread_rng();
+
+    let random: String = rng
         .sample_iter(&Alphanumeric)
         .take(10)
         .map(char::from)
@@ -70,73 +79,131 @@ fn internal_id(id: &str) -> String {
     format!("internal__{id}_{}", random)
 }
 
-/// returns ($id,area(id:$id))
-async fn nominatim_search(search: &str) -> Result<(GeocodeaArea, String), SearchError> {
-    let client = reqwest::Client::new();
-    let res = client
-        .get(format!(
-            "https://nominatim.openstreetmap.org/search?format=jsonv2&q={search}"
-        ))
-        .header("User-Agent", "Underpass, annie@bursary.town")
-        .send()
-        .await?;
+#[cfg(test)]
+mod tests {
+    use mockall::predicate::*;
 
-    let res: serde_json::Value = res.json().await?;
-    let arr = res
-        .as_array()
-        .ok_or_else(|| SearchError::Nominatim("response was not an array".to_string()))?;
-    if let Some(serde_json::Value::Object(obj)) = arr.get(0) {
-        let orig_id = obj
-            .get("osm_id")
-            .ok_or_else(|| {
-                SearchError::Nominatim("nominatim response did not contain osm_id".to_string())
-            })?
-            .as_number()
-            .ok_or_else(|| SearchError::Nominatim("osm_id was not a number".to_string()))?
-            .as_u64()
-            .ok_or_else(|| SearchError::Nominatim("osm_id was not a u64".to_string()))?;
-        let ty = obj
-            .get("osm_type")
-            .ok_or_else(|| {
-                SearchError::Nominatim("nominatim response did not contain osm_type".to_string())
-            })?
-            .as_str()
-            .ok_or_else(|| SearchError::Nominatim("osm_type was not a string".to_string()))?;
-        let name = obj
-            .get("display_name")
-            .ok_or_else(|| {
-                SearchError::Nominatim(
-                    "nominatim response did not contain display_name".to_string(),
-                )
-            })?
-            .as_str()
-            .ok_or_else(|| SearchError::Nominatim("display_name was not a string".to_string()))?;
+    use super::*;
 
-        // https://github.com/tyrasd/overpass-turbo/blob/eb216aa08b06590a4efc4e10d6a25140d53fcf70/js/shortcuts.ts#L92
+    #[tokio::test]
+    async fn test_no_macros_does_nothing() {
+        let query = "[out:json][timeout:60];
+node[place=city];
+out;>;out skel qt;"
+            .to_string();
+        let nominatim = MockNominatim::new();
 
-        let mut id = orig_id;
-        if ty == "relation" {
-            id += 3600000000;
-        }
+        let (processed, _areas) = preprocess_query(query, &Bbox::default(), nominatim)
+            .await
+            .unwrap();
 
-        let id = if ty == "way" {
-            format!("{},{id}", id + 2400000000)
-        } else {
-            format!("{id}")
+        assert_eq!(
+            processed,
+            "[out:json][timeout:60];
+node[place=city];
+out;>;out skel qt;"
+        )
+    }
+
+    #[tokio::test]
+    async fn test_out_macro() {
+        let query = "[out:json][timeout:60];
+nw[amenity=drinking_water];
+{{out}}"
+            .to_string();
+        let nominatim = MockNominatim::new();
+
+        let (processed, _areas) = preprocess_query(query, &Bbox::default(), nominatim)
+            .await
+            .unwrap();
+
+        assert_eq!(
+            processed,
+            "[out:json][timeout:60];
+nw[amenity=drinking_water];
+out;>;out skel qt;"
+        )
+    }
+
+    #[tokio::test]
+    async fn test_bbox_macro() {
+        let query = "[out:json][timeout:60];
+node[amenity=drinking_water]({{bbox}});
+out;>;out skel qt;"
+            .to_string();
+        let nominatim = MockNominatim::new();
+
+        let bbox = Bbox {
+            ne: [0.3, 1.2345],
+            sw: [2.1, 3.0],
         };
 
-        Ok((
-            GeocodeaArea {
-                id: orig_id,
-                ty: ty.to_string(),
-                name: name.to_string(),
-                original: search.to_string(),
-            },
-            format!("area(id:{})", id),
-        ))
-    } else {
-        Err(SearchError::Nominatim(format!(
-            "no results found for {search}"
-        )))
+        let (processed, _areas) = preprocess_query(query, &bbox, nominatim).await.unwrap();
+
+        assert_eq!(
+            processed,
+            "[out:json][timeout:60];
+node[amenity=drinking_water](2.1,3,0.3,1.2345);
+out;>;out skel qt;"
+        )
+    }
+
+    #[tokio::test]
+    async fn test_geocode_area() {
+        let query = "[out:json][timeout:60];
+{{geocodeArea:Hokkaido, Japan}}->.japan;
+node[place=city](area.japan);
+{{out}}"
+            .to_string();
+        let mut nominatim = MockNominatim::new();
+        nominatim
+            .expect_search()
+            .with(eq("Hokkaido, Japan"))
+            .times(1)
+            .returning(|_| Ok((GeocodeaArea::default(), "area(id:3606679920)".to_string())));
+
+        let (processed, _areas) = preprocess_query(query, &Bbox::default(), nominatim)
+            .await
+            .unwrap();
+
+        assert_eq!(
+            processed,
+            "[out:json][timeout:60];
+(area(id:3606679920);)->.japan;
+node[place=city](area.japan);
+out;>;out skel qt;"
+        )
+    }
+
+    #[tokio::test]
+    async fn test_geocode_area_multiple() {
+        let query = "[out:json][timeout:60];
+{{geocodeArea:Hokkaido, Japan;Aomori, Japan}}->.japan;
+node[place=city](area.japan);
+{{out}}"
+            .to_string();
+        let mut nominatim = MockNominatim::new();
+        nominatim
+            .expect_search()
+            .with(eq("Hokkaido, Japan"))
+            .times(1)
+            .returning(|_| Ok((GeocodeaArea::default(), "area(id:3606679920)".to_string())));
+        nominatim
+            .expect_search()
+            .with(eq("Aomori, Japan"))
+            .times(1)
+            .returning(|_| Ok((GeocodeaArea::default(), "area(id:3601834655)".to_string())));
+
+        let (processed, _areas) = preprocess_query(query, &Bbox::default(), nominatim)
+            .await
+            .unwrap();
+
+        assert_eq!(
+            processed,
+            "[out:json][timeout:60];
+(area(id:3606679920);area(id:3601834655);)->.japan;
+node[place=city](area.japan);
+out;>;out skel qt;"
+        )
     }
 }

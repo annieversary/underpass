@@ -16,3 +16,7 @@ thiserror = "1.0.49"
 regex = "1.9.6"
 dotenv = "0.15.0"
 rand = "0.8.5"
+async-trait = "0.1.74"
+
+[dev-dependencies]
+mockall = "0.11.2"

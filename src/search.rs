@@ -5,12 +5,13 @@ use serde_json::json;
 use thiserror::Error;
 
 use crate::{
+    nominatim::OsmNominatim,
     osm_to_geojson::{osm_to_geojson, Osm},
     preprocess::preprocess_query,
 };
 
 pub async fn search(Json(json): Json<SearchParams>) -> Result<Json<SearchResults>, SearchError> {
-    let (query, geocode_areas) = preprocess_query(json.query, &json.bbox).await?;
+    let (query, geocode_areas) = preprocess_query(json.query, &json.bbox, OsmNominatim).await?;
 
     // println!("{}", &query);
 
@@ -37,7 +38,7 @@ pub async fn search(Json(json): Json<SearchParams>) -> Result<Json<SearchResults
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Default)]
 pub struct Bbox {
     pub ne: [f32; 2],
     pub sw: [f32; 2],
@@ -56,7 +57,7 @@ pub struct SearchResults {
     pub geocode_areas: Vec<GeocodeaArea>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Default)]
 pub struct GeocodeaArea {
     pub id: u64,
     pub ty: String,

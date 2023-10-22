@@ -122,12 +122,6 @@ async function run() {
                 const areas = res.geocode_areas.map(a => `${a.original} - <a href="//www.openstreetmap.org/${a.ty}/${a.id}" target="_blank" class="osm-link">${a.name}</a><br/>`).join('');
                 resultsDiv.innerHTML = `<h2>Geocode areas found:</h2>${areas}`;
             }
-
-            const button = document.createElement('button');
-            button.innerHTML = 'View query';
-            button.id = 'view-query-button';
-            button.onclick = () => openModal(`<pre>${res.query}</pre>`);
-            document.getElementById('header-buttons').appendChild(button);
         } else {
             if (res.format == 'xml') {
                 const dom = new window.DOMParser().parseFromString(
@@ -143,6 +137,14 @@ async function run() {
             } else {
                 alert(res.error);
             }
+        }
+
+        if ("query" in res) {
+            const button = document.createElement('button');
+            button.innerHTML = 'View query';
+            button.id = 'view-query-button';
+            button.onclick = () => openModal(`<pre>${res.query}</pre>`);
+            document.getElementById('header-buttons').appendChild(button);
         }
     } catch (e) {
         console.log(e);

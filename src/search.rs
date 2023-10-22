@@ -33,7 +33,7 @@ pub async fn search(Json(json): Json<SearchParams>) -> Result<Json<SearchResults
         }))
     } else {
         let res = res.text().await?;
-        Err(SearchError::Syntax(res))
+        Err(SearchError::Syntax { error: res, query })
     }
 }
 
@@ -70,21 +70,23 @@ pub enum SearchError {
     Network(#[from] reqwest::Error),
     #[error("json parse error")]
     JsonParse(reqwest::Error),
-    #[error("{0}")]
-    Syntax(String),
+    #[error("{error}")]
+    Syntax { error: String, query: String },
     #[error("Nominatim: {0}")]
     Nominatim(String),
 }
 
 impl IntoResponse for SearchError {
     fn into_response(self) -> axum::response::Response {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(json!({
-                "error": format!("{self}"),
-                "format": if matches!(self, Self::Syntax(..)) { "xml" } else { "text" },
-            })),
-        )
-            .into_response()
+        let mut json = json!({
+            "error": format!("{self}"),
+            "format": if matches!(self, Self::Syntax{ .. }) { "xml" } else { "text" },
+        });
+        if let Self::Syntax { query, .. } = self {
+            json.as_object_mut()
+                .unwrap()
+                .insert("query".to_string(), query.into());
+        }
+        (StatusCode::INTERNAL_SERVER_ERROR, Json(json)).into_response()
     }
 }

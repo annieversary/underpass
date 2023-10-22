@@ -20,3 +20,9 @@ it also implements more macros, such as `aroundSelf`, which works like:
 node["amenity"="bench"]({{bbox}})->.benches;
 {{aroundSelf.benches:7}}->.benchesAroundOtherBenches;
 ```
+
+`geocodeArea` has been extended to support multiple areas, separated by `;`
+
+```
+{{geocodeArea:Hokkaido, Japan; Aomori, Japan}}->.japan;
+```

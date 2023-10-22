@@ -23,9 +23,15 @@ pub async fn preprocess_query(
                 bbox.sw[0], bbox.sw[1], bbox.ne[0], bbox.ne[1]
             ),
             "geocodeArea" => {
-                let (id, area) = nominatim_search(caps[3].trim()).await?;
-                geocode_areas.push(id);
-                area
+                let mut r = "(".to_string();
+                for s in caps[3].split(';') {
+                    let (id, area) = nominatim_search(s.trim()).await?;
+                    geocode_areas.push(id);
+                    r.push_str(&area);
+                    r.push(';');
+                }
+                r.push(')');
+                r
             }
             m if m.starts_with("aroundSelf.") => {
                 let set = m.trim_start_matches("aroundSelf.");

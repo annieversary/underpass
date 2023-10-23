@@ -1,13 +1,12 @@
-use crate::{osm_to_geojson::*, search::SearchError};
+use crate::search::SearchError;
 use geo::{GeodesicBearing, Point};
 use geojson::{Feature, FeatureCollection, Value};
-use std::collections::BTreeMap;
 
-pub fn filter(osm: Osm, min: f64, max: f64) -> Result<FeatureCollection, SearchError> {
-    // TODO change to take in a geojson::FeatureCollection?
-    // it would be much nicer if we can make everything be a GeoJson -> GeoJson
-    // it simplifies a bunch since LineStrings already include all the coordinates in geometry
-
+pub fn filter(
+    collection: FeatureCollection,
+    min: f64,
+    max: f64,
+) -> Result<FeatureCollection, SearchError> {
     // TODO add client-side validation too
     if min > max {
         return Err(SearchError::RoadAngle(
@@ -15,27 +14,20 @@ pub fn filter(osm: Osm, min: f64, max: f64) -> Result<FeatureCollection, SearchE
         ));
     }
 
-    let ways = osm.elements.iter().filter_map(|w| match w {
-        Element::Way(w) => Some(w),
-        _ => None,
-    });
-    let nodes = osm.elements.iter().filter_map(|n| match n {
-        Element::Node(n) => Some(n),
-        _ => None,
-    });
-
-    let node_map = BTreeMap::from_iter(nodes.map(|n| (n.id, n)));
+    let ways =
+        collection
+            .features
+            .iter()
+            .filter_map(|w| match w.geometry.as_ref().map(|g| &g.value) {
+                Some(Value::LineString(w)) => Some(w),
+                _ => None,
+            });
 
     let features = ways
         .flat_map(|way| {
             let coords = way
-                .nodes
                 .iter()
-                .flat_map(|id| {
-                    let node = node_map.get(id)?;
-
-                    Some(Point::new(node.lon, node.lat))
-                })
+                .map(|vec| Point::new(vec[0], vec[1]))
                 .collect::<Vec<_>>();
 
             coords
@@ -44,6 +36,7 @@ pub fn filter(osm: Osm, min: f64, max: f64) -> Result<FeatureCollection, SearchE
                     let bearing: f64 = get_bearing(pair[0], pair[1]);
                     if bearing > min && bearing < max {
                         Some(Feature {
+                            // TODO copy properties over and also add a `osm_id` one?
                             geometry: Some(
                                 Value::LineString(vec![
                                     vec![pair[0].x(), pair[0].y()],

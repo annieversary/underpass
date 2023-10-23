@@ -27,12 +27,10 @@ pub async fn search(Json(json): Json<SearchParams>) -> Result<Json<SearchResults
     if res.status() == 200 {
         let osm: Osm = res.json().await.map_err(SearchError::JsonParse)?;
 
-        // let geojson = GeoJson::FeatureCollection(osm_to_geojson(osm));
-        let geojson = GeoJson::FeatureCollection(road_angle::filter(
-            osm,
-            json.road_angle_min,
-            json.road_angle_max,
-        )?);
+        let collection = osm_to_geojson(osm);
+        let collection = road_angle::filter(collection, json.road_angle_min, json.road_angle_max)?;
+
+        let geojson = GeoJson::FeatureCollection(collection);
 
         Ok(Json(SearchResults {
             data: geojson,

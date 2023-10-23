@@ -17,6 +17,7 @@ regex = "1.9.6"
 dotenv = "0.15.0"
 rand = "0.8.5"
 async-trait = "0.1.74"
+geo = "0.26.0"
 
 [dev-dependencies]
 mockall = "0.11.2"

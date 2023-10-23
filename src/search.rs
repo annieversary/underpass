@@ -1,4 +1,5 @@
 use axum::response::{IntoResponse, Json};
+use geojson::GeoJson;
 use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -8,6 +9,7 @@ use crate::{
     nominatim::OsmNominatim,
     osm_to_geojson::{osm_to_geojson, Osm},
     preprocess::preprocess_query,
+    road_angle,
 };
 
 pub async fn search(Json(json): Json<SearchParams>) -> Result<Json<SearchResults>, SearchError> {
@@ -23,9 +25,14 @@ pub async fn search(Json(json): Json<SearchParams>) -> Result<Json<SearchResults
         .await?;
 
     if res.status() == 200 {
-        let res: Osm = res.json().await.map_err(SearchError::JsonParse)?;
+        let osm: Osm = res.json().await.map_err(SearchError::JsonParse)?;
 
-        let geojson = osm_to_geojson(res);
+        // let geojson = GeoJson::FeatureCollection(osm_to_geojson(osm));
+        let geojson = GeoJson::FeatureCollection(road_angle::filter(
+            osm,
+            json.road_angle_min,
+            json.road_angle_max,
+        )?);
 
         Ok(Json(SearchResults {
             data: geojson,
@@ -48,6 +55,8 @@ pub struct Bbox {
 pub struct SearchParams {
     query: String,
     bbox: Bbox,
+    road_angle_min: f64,
+    road_angle_max: f64,
     // we probably want like a list of Filter nodes or smth
 }
 #[derive(Serialize)]
@@ -75,6 +84,8 @@ pub enum SearchError {
     Syntax { error: String, query: String },
     #[error("Nominatim: {0}")]
     Nominatim(String),
+    #[error("Road angle: {0}")]
+    RoadAngle(String),
 }
 
 impl IntoResponse for SearchError {

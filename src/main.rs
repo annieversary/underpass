@@ -10,6 +10,7 @@ use axum::{
 mod nominatim;
 mod osm_to_geojson;
 mod preprocess;
+mod road_angle;
 mod search;
 
 #[tokio::main]
@@ -67,5 +68,5 @@ async fn js() -> ([(&'static str, &'static str); 1], String) {
     #[cfg(not(debug_assertions))]
     let a = include_str!("index.js").to_string();
 
-    ([("content-type", "text/css")], a)
+    ([("content-type", "text/js")], a)
 }

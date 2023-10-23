@@ -106,6 +106,8 @@ async function run() {
             body: JSON.stringify({
                 query: editor.getValue(),
                 bbox: mapBounds(),
+                road_angle_min: +document.querySelector('#road-angle-min').value,
+                road_angle_max: +document.querySelector('#road-angle-max').value,
             }),
             headers: {
                 'Content-Type': 'application/json'
@@ -585,7 +587,6 @@ const settings = {
 
 // TODO we probably want a way to abstract this when we add more settings keys
 const settingsHideEmptyNodes = document.getElementById('settings-hide-empty-nodes');
-console.log(window.localStorage.getItem('settings.hideEmptyNodes'));
 settingsHideEmptyNodes.checked = window.localStorage.getItem('settings.hideEmptyNodes') === 'true';
 settingsHideEmptyNodes.onchange = function () {
     window.localStorage.setItem('settings.hideEmptyNodes', this.checked);

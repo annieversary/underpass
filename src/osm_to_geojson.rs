@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use geojson::*;
 use serde::Deserialize;
 
-pub fn osm_to_geojson(osm: Osm) -> GeoJson {
+pub fn osm_to_geojson(osm: Osm) -> FeatureCollection {
     let node_map = BTreeMap::from_iter(osm.elements.iter().filter_map(|n| {
         if let Element::Node(node) = n {
             Some((node.id, vec![node.lon, node.lat]))
@@ -18,11 +18,11 @@ pub fn osm_to_geojson(osm: Osm) -> GeoJson {
         .map(|el| element_to_feature(&el, &node_map))
         .collect();
 
-    GeoJson::FeatureCollection(FeatureCollection {
+    FeatureCollection {
         bbox: None,
         features,
         foreign_members: None,
-    })
+    }
 }
 
 fn element_to_feature(el: &Element, node_map: &BTreeMap<u64, Vec<f64>>) -> Feature {

@@ -31,6 +31,9 @@
                 <button id="export-button">
                     Export
                 </button>
+                <button id="settings-button">
+                    Settings
+                </button>
             </div>
 
             <h1>
@@ -60,6 +63,20 @@
             <p>
                 loading :3
             </p>
+        </div>
+
+        <div id="settings-modal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <div class="modal-inner">
+                    <h2>Settings</h2>
+
+                    <label title="Ways are made out of nodes which have no tags. Enabling this will hide those points, since they usually serve no purpose">
+                        Hide nodes without tags
+                        <input id="settings-hide-empty-nodes" type="checkbox" />
+                    </label>
+                </div>
+            </div>
         </div>
 
         <script type="text/javascript" src="/index.js"></script>

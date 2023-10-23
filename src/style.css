@@ -20,7 +20,7 @@ body {
     border-radius: 0;
     border: none;
     color: white;
-    background-color: var(--button-color, #48c774);
+    background-color: var(--button-color, #aaa);
     cursor: pointer;
     height: var(--header-height);
 
@@ -28,10 +28,12 @@ body {
     align-items: center;
 }
 
-#clear-button,
-#export-button,
-#view-query-button {
-    --button-color: grey;
+#header button:nth-child(even) {
+    --button-color: #999;
+}
+
+#run-button {
+    --button-color: #48c774;
 }
 
 #container {
@@ -172,5 +174,5 @@ body {
 }
 
 .modal-inner {
-    overflow-x: scroll;
+    overflow-x: auto;
 }

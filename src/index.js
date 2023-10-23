@@ -88,8 +88,10 @@ function mapBounds() {
 
 let resultsDiv = document.querySelector("#results");
 
+// loading modal doesnt use openModal cause we want this custom style which looks nicer imo
 let loading = false;
 let loadingModal = document.querySelector("#loading-modal");
+
 async function run() {
     if (loading) return;
     loading = true;
@@ -114,8 +116,12 @@ async function run() {
         resultsDiv.innerHTML = '';
         if (r.status == 200) {
             const data = res.data;
-            data.features = data.features
-                .filter(f => !(f.geometry.type == "Point" && Object.keys(f.properties).length == 0));
+
+            if (settings.hideEmptyNodes()) {
+                data.features = data.features
+                    .filter(f => !(f.geometry.type == "Point" && Object.keys(f.properties).length == 0));
+            }
+
             map.getSource("OverpassAPI").setData(data);
 
             if (res.geocode_areas.length > 0) {
@@ -140,11 +146,14 @@ async function run() {
         }
 
         if ("query" in res) {
-            const button = document.createElement('button');
-            button.innerHTML = 'View query';
-            button.id = 'view-query-button';
+            let button = document.getElementById('view-query-button');
+            if (!button) {
+                button = document.createElement('button');
+                button.innerHTML = 'View query';
+                button.id = 'view-query-button';
+                document.getElementById('header-buttons').appendChild(button);
+            }
             button.onclick = () => openModal(`<pre>${res.query}</pre>`);
-            document.getElementById('header-buttons').appendChild(button);
         }
     } catch (e) {
         console.error(e);
@@ -173,8 +182,9 @@ document.querySelector('#export-button').onclick = () => {
     const out = map.getSource("OverpassAPI").serialize();
     if (out.data.features.length == 0) {
         alert('No data to export!');
+    } else {
+        download('export.json', out);
     }
-    download('export.json', out);
 };
 function download(filename, json) {
     var element = document.createElement('a');
@@ -525,7 +535,8 @@ map.addControl(
     })
 );
 
-
+// throwaway modals
+// content: string
 function openModal(content) {
     const modal = document.createElement('div');
     modal.classList.add('modal');
@@ -545,4 +556,37 @@ function openModal(content) {
             modal.remove();
         }
     };
+
+    // TODO pressing esc should close the modal
 }
+
+
+
+// settings
+// done by hand cause it's not a throwaway modal like with openModal
+const settingsButton = document.getElementById('settings-button');
+const settingsModal = document.getElementById('settings-modal');
+settingsButton.onclick = function () {
+    settingsModal.style.display = 'flex';
+
+    settingsModal.querySelector('span.close').onclick = function() {
+        settingsModal.style.display = 'none';
+    };
+    window.onclick = function(event) {
+        if (event.target == settingsModal) {
+            settingsModal.style.display = 'none';
+        }
+    };
+};
+
+const settings = {
+    hideEmptyNodes: () => document.getElementById('settings-hide-empty-nodes').checked,
+};
+
+// TODO we probably want a way to abstract this when we add more settings keys
+const settingsHideEmptyNodes = document.getElementById('settings-hide-empty-nodes');
+console.log(window.localStorage.getItem('settings.hideEmptyNodes'));
+settingsHideEmptyNodes.checked = window.localStorage.getItem('settings.hideEmptyNodes') === 'true';
+settingsHideEmptyNodes.onchange = function () {
+    window.localStorage.setItem('settings.hideEmptyNodes', this.checked);
+};

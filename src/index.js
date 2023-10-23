@@ -147,7 +147,10 @@ async function run() {
             document.getElementById('header-buttons').appendChild(button);
         }
     } catch (e) {
-        console.log(e);
+        console.error(e);
+        if (e instanceof TypeError) {
+            alert(e.message);
+        }
     }
 
     loading = false;

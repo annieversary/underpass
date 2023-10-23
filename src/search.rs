@@ -27,8 +27,11 @@ pub async fn search(Json(json): Json<SearchParams>) -> Result<Json<SearchResults
     if res.status() == 200 {
         let osm: Osm = res.json().await.map_err(SearchError::JsonParse)?;
 
-        let collection = osm_to_geojson(osm);
-        let collection = road_angle::filter(collection, json.road_angle_min, json.road_angle_max)?;
+        let mut collection = osm_to_geojson(osm);
+
+        if let Some(RoadAngle { min, max }) = json.road_angle {
+            collection = road_angle::filter(collection, min, max)?;
+        }
 
         let geojson = GeoJson::FeatureCollection(collection);
 
@@ -53,10 +56,17 @@ pub struct Bbox {
 pub struct SearchParams {
     query: String,
     bbox: Bbox,
-    road_angle_min: f64,
-    road_angle_max: f64,
+
+    road_angle: Option<RoadAngle>,
     // we probably want like a list of Filter nodes or smth
 }
+
+#[derive(Deserialize)]
+pub struct RoadAngle {
+    min: f64,
+    max: f64,
+}
+
 #[derive(Serialize)]
 pub struct SearchResults {
     pub data: geojson::GeoJson,

@@ -106,8 +106,10 @@ async function run() {
             body: JSON.stringify({
                 query: editor.getValue(),
                 bbox: mapBounds(),
-                road_angle_min: +document.querySelector('#road-angle-min').value,
-                road_angle_max: +document.querySelector('#road-angle-max').value,
+                road_angle: !document.querySelector('#road-angle-toggle').checked ? null : {
+                    min: +document.querySelector('#road-angle-min').value,
+                    max: +document.querySelector('#road-angle-max').value,
+                },
             }),
             headers: {
                 'Content-Type': 'application/json'

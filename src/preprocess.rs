@@ -30,7 +30,13 @@ pub async fn preprocess_query(
             "geocodeArea" => {
                 let mut r = "(".to_string();
                 for s in caps[3].split(';') {
-                    let out = nominatim.search(s.trim()).await?;
+                    let mut params = s.split('@').map(str::trim);
+                    let search = params
+                        .next()
+                        .expect("result of split should have at least one element");
+                    let lang = params.next().unwrap_or("en");
+
+                    let out = nominatim.search(search.trim(), lang).await?;
 
                     let ids = out
                         .ids
@@ -187,16 +193,12 @@ node[place=city](area.japan);
             .to_string();
         let mut nominatim = MockNominatim::new();
 
-        nominatim
-            .expect_search()
-            .with(eq("Hokkaido, Japan"))
-            .times(1)
-            .returning(|_| {
-                Ok(NominatimOuput {
-                    ids: vec![3606679920],
-                    area: GeocodeaArea::default(),
-                })
-            });
+        nominatim.expect_search().times(1).returning(|_, _| {
+            Ok(NominatimOuput {
+                ids: vec![3606679920],
+                area: GeocodeaArea::default(),
+            })
+        });
 
         let (processed, _areas) = preprocess_query(query, &Bbox::default(), nominatim)
             .await
@@ -222,9 +224,9 @@ node[place=city](area.japan);
         let mut nominatim = MockNominatim::new();
         nominatim
             .expect_search()
-            .with(eq("Hokkaido, Japan"))
+            .with(eq("Hokkaido, Japan"), eq("en"))
             .times(1)
-            .returning(|_| {
+            .returning(|_, _| {
                 Ok(NominatimOuput {
                     ids: vec![3606679920],
                     area: GeocodeaArea::default(),
@@ -232,9 +234,52 @@ node[place=city](area.japan);
             });
         nominatim
             .expect_search()
-            .with(eq("Aomori, Japan"))
+            .with(eq("Aomori, Japan"), eq("en"))
             .times(1)
-            .returning(|_| {
+            .returning(|_, _| {
+                Ok(NominatimOuput {
+                    ids: vec![3601834655],
+                    area: GeocodeaArea::default(),
+                })
+            });
+
+        let (processed, _areas) = preprocess_query(query, &Bbox::default(), nominatim)
+            .await
+            .unwrap();
+
+        assert_eq!(
+            processed,
+            "[out:json][timeout:60];
+(area(id:3606679920);area(id:3601834655);)->.japan;
+node[place=city](area.japan);
+out;>;out skel qt;"
+        )
+    }
+
+    #[tokio::test]
+    async fn test_geocode_area_with_langs() {
+        let query = "[out:json][timeout:60];
+{{geocodeArea:Hokkaido, Japan@en;Aomori, Japan@es}}->.japan;
+node[place=city](area.japan);
+{{out}}"
+            .to_string();
+
+        let mut nominatim = MockNominatim::new();
+        nominatim
+            .expect_search()
+            .with(eq("Hokkaido, Japan"), eq("en"))
+            .times(1)
+            .returning(|_, _| {
+                Ok(NominatimOuput {
+                    ids: vec![3606679920],
+                    area: GeocodeaArea::default(),
+                })
+            });
+        nominatim
+            .expect_search()
+            .with(eq("Aomori, Japan"), eq("es"))
+            .times(1)
+            .returning(|_, _| {
                 Ok(NominatimOuput {
                     ids: vec![3601834655],
                     area: GeocodeaArea::default(),

@@ -12,20 +12,21 @@ pub struct NominatimOuput {
 #[cfg_attr(test, automock)]
 #[async_trait::async_trait]
 pub trait Nominatim {
-    async fn search(&self, search: &str) -> Result<NominatimOuput, SearchError>;
+    async fn search(&self, search: &str, lang: &str) -> Result<NominatimOuput, SearchError>;
 }
 
 pub struct OsmNominatim;
 #[async_trait::async_trait]
 impl Nominatim for OsmNominatim {
     /// returns ($id,area(id:$id))
-    async fn search(&self, search: &str) -> Result<NominatimOuput, SearchError> {
+    async fn search(&self, search: &str, lang: &str) -> Result<NominatimOuput, SearchError> {
         let client = reqwest::Client::new();
         let res = client
             .get(format!(
-                "https://nominatim.openstreetmap.org/search?format=jsonv2&q={search}"
+
+                "https://nominatim.openstreetmap.org/search?format=jsonv2&accept-language={lang}&q={search}"
             ))
-            .header("User-Agent", "Underpass, annie@bursary.town")
+            .header("User-Agent", "Underpass, underpass.versary.town, annie@versary.town")
             .send()
             .await?;
 
@@ -34,7 +35,7 @@ impl Nominatim for OsmNominatim {
             .as_array()
             .ok_or_else(|| SearchError::Nominatim("response was not an array".to_string()))?;
         if let Some(serde_json::Value::Object(obj)) = arr.get(0) {
-            let orig_id = obj
+            let id = obj
                 .get("osm_id")
                 .ok_or_else(|| {
                     SearchError::Nominatim("nominatim response did not contain osm_id".to_string())
@@ -66,19 +67,18 @@ impl Nominatim for OsmNominatim {
 
             // https://github.com/tyrasd/overpass-turbo/blob/eb216aa08b06590a4efc4e10d6a25140d53fcf70/js/shortcuts.ts#L92
 
-            let mut id = orig_id;
-            if ty == "relation" {
-                id += 3600000000;
-            }
-
             Ok(NominatimOuput {
+                // Do not +2400000000 for ways since version 0.7.57,
+                // for backward compatibility query both IDs, see
                 ids: if ty == "way" {
                     vec![id + 2400000000, id]
+                } else if ty == "relation" {
+                    vec![id + 3600000000]
                 } else {
                     vec![id]
                 },
                 area: GeocodeaArea {
-                    id: orig_id,
+                    id,
                     ty: ty.to_string(),
                     name: name.to_string(),
                     original: search.to_string(),

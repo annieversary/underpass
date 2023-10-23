@@ -74,6 +74,7 @@ pub async fn preprocess_query(
 /// `internal__{id}_{random characters}`
 fn internal_id(id: &str) -> String {
     #[cfg(test)]
+    // this will always return AAAAA but i dont think it matters for tests
     let rng = rand::rngs::mock::StepRng::new(2, 1);
     #[cfg(not(test))]
     let rng = rand::thread_rng();
@@ -151,6 +152,28 @@ out;>;out skel qt;"
             processed,
             "[out:json][timeout:60];
 node[amenity=drinking_water](2.1,3,0.3,1.2345);
+out;>;out skel qt;"
+        )
+    }
+
+    #[tokio::test]
+    async fn test_around_self_macro() {
+        let query = "[out:json][timeout:60];
+node[amenity=bench]->.benches;
+{{aroundSelf.benches:7}}->.benchesAroundOtherBenches;
+out;>;out skel qt;"
+            .to_string();
+        let nominatim = MockNominatim::new();
+
+        let (processed, _areas) = preprocess_query(query, &Bbox::default(), nominatim)
+            .await
+            .unwrap();
+
+        assert_eq!(
+            processed,
+            "[out:json][timeout:60];
+node[amenity=bench]->.benches;
+foreach.benches->.internal__it_AAAAAAAAAA(nwr.benches(around.internal__it_AAAAAAAAAA:7)->.internal__nearby_AAAAAAAAAA; (.internal__nearby_AAAAAAAAAA; - .internal__it_AAAAAAAAAA;)->.internal__others_AAAAAAAAAA; (.internal__collect_AAAAAAAAAA; .internal__others_AAAAAAAAAA;)->.internal__collect_AAAAAAAAAA;); .internal__empty_AAAAAAAAAA->._; .internal__collect_AAAAAAAAAA->.benchesAroundOtherBenches;
 out;>;out skel qt;"
         )
     }

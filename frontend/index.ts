@@ -2,6 +2,11 @@ import maplibregl from 'maplibre-gl';
 import MaplibreGeocoder from '@maplibre/maplibre-gl-geocoder';
 import turfLength from '@turf/length';
 
+import { EditorView, ViewPlugin, keymap, lineNumbers, rectangularSelection, highlightActiveLine } from "@codemirror/view";
+import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
+import { closeBrackets } from "@codemirror/autocomplete";
+import { bracketMatching } from "@codemirror/language";
+
 import './style.css';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import '@maplibre/maplibre-gl-geocoder/dist/maplibre-gl-geocoder.css';
@@ -63,25 +68,41 @@ const map = new maplibregl.Map({
     zoom
 });
 
-var editor = CodeMirror(document.getElementById("code-container"), {
-    styleActiveLine: true,
-    lineNumbers: true,
-    matchBrackets: true,
-    autoCloseBrackets: true,
-    autoCloseTags: true,
-    mode: "htmlmixed",
+
+let editor = new EditorView({
+    extensions: [
+        history(),
+        lineNumbers(),
+        rectangularSelection(),
+        highlightActiveLine(),
+        bracketMatching(),
+        closeBrackets(),
+        keymap.of([...defaultKeymap, ...historyKeymap]),
+        ViewPlugin.fromClass(class {
+            constructor(_view) { }
+
+            update(_update) {
+                window.localStorage.setItem('query', editor.state.doc.toString());
+
+                const b = document.getElementById('view-query-button');
+                if (b) {
+                    b.remove();
+                }
+            }
+        }),
+    ],
+    parent: document.getElementById("code-container"),
 });
 
 const query = window.localStorage.getItem('query') || '[out:json][timeout:25];\n\nway["highway"]({{bbox}});\n\nout;>;out skel qt;';
-editor.setValue(query);
-editor.on('change', function() {
-    window.localStorage.setItem('query', editor.getValue());
+editor.dispatch({
+    changes: { from: 0, to: editor.state.doc.length, insert: query }
+})
 
-    const b = document.getElementById('view-query-button');
-    if (b) {
-        b.remove();
-    }
-});
+
+
+
+
 
 function mapBounds() {
     const b = map.getBounds();
@@ -90,8 +111,6 @@ function mapBounds() {
         sw: [b._sw.lat, b._sw.lng],
     };
 }
-
-
 
 let resultsDiv = document.querySelector("#results");
 
@@ -111,7 +130,7 @@ async function run() {
         const r = await fetch('/search', {
             method: 'POST',
             body: JSON.stringify({
-                query: editor.getValue(),
+                query: editor.state.doc.toString(),
                 bbox: mapBounds(),
                 road_angle: !document.querySelector('#road-angle-toggle').checked ? null : {
                     min: +document.querySelector('#road-angle-min').value,

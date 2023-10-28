@@ -1,0 +1,17 @@
+{
+  "name": "underpass",
+  "version": "1.0.0",
+  "description": "(wip name until we decide on something else)",
+  "main": "index.js",
+  "scripts": {
+      "build": "esbuild frontend/index.ts --bundle --sourcemap --outfile=public/index.js",
+      "watch": "build --watch",
+      "typecheck": "npx tsc -noEmit frontend/index.ts",
+      "prod": "esbuild frontend/index.ts --bundle --minify --outfile=public/index.js && cp frontend/index.html public && cp frontend/style.css public"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "esbuild": "0.19.5"
+  }
+}

@@ -47,26 +47,26 @@ async fn home() -> Html<String> {
     // this way we can live edit in local, and dont have to keep the files next to the executable in prod
 
     #[cfg(debug_assertions)]
-    return Html(read_to_string("./src/index.html").unwrap());
+    return Html(read_to_string("./frontend/index.html").unwrap());
 
     #[cfg(not(debug_assertions))]
-    Html(include_str!("index.html").to_string())
+    Html(include_str!("../public/index.html").to_string())
 }
 
 async fn css() -> ([(&'static str, &'static str); 1], String) {
     #[cfg(debug_assertions)]
-    let a = read_to_string("./src/style.css").unwrap();
+    let a = read_to_string("./frontend/style.css").unwrap();
     #[cfg(not(debug_assertions))]
-    let a = include_str!("style.css").to_string();
+    let a = include_str!("../public/style.css").to_string();
 
     ([("content-type", "text/css")], a)
 }
 
 async fn js() -> ([(&'static str, &'static str); 1], String) {
     #[cfg(debug_assertions)]
-    let a = read_to_string("./src/index.js").unwrap();
+    let a = read_to_string("./public/index.js").unwrap();
     #[cfg(not(debug_assertions))]
-    let a = include_str!("index.js").to_string();
+    let a = include_str!("../public/index.js").to_string();
 
     ([("content-type", "text/js")], a)
 }

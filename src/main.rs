@@ -23,7 +23,7 @@ async fn main() {
     // build our application with a single route
     let app = Router::new()
         .route("/", get(home))
-        .route("/style.css", get(css))
+        .route("/index.css", get(css))
         .route("/index.js", get(js))
         .route("/search", post(search::search));
 
@@ -55,9 +55,9 @@ async fn home() -> Html<String> {
 
 async fn css() -> ([(&'static str, &'static str); 1], String) {
     #[cfg(debug_assertions)]
-    let a = read_to_string("./frontend/style.css").unwrap();
+    let a = read_to_string("./public/index.css").unwrap();
     #[cfg(not(debug_assertions))]
-    let a = include_str!("../public/style.css").to_string();
+    let a = include_str!("../public/index.css").to_string();
 
     ([("content-type", "text/css")], a)
 }

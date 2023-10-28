@@ -1,15 +1,23 @@
+import maplibregl from 'maplibre-gl';
+import MaplibreGeocoder from '@maplibre/maplibre-gl-geocoder';
+import turfLength from '@turf/length';
+
+import './style.css';
+import 'maplibre-gl/dist/maplibre-gl.css';
+import '@maplibre/maplibre-gl-geocoder/dist/maplibre-gl-geocoder.css';
+
 // resize
 const resizer = document.querySelector("#resizer");
 const left = document.querySelector("#left");
 const right = document.querySelector("#right");
 
-function resize(e) {
+function resize(e: { x: number }) {
     left.style.width = `${e.x}px`;
     right.style.width = `${window.innerWidth - e.x}px`;
-    window.localStorage.setItem('codeWidth', e.x);
+    window.localStorage.setItem('codeWidth', e.x.toString());
 }
 
-const codeWidth = window.localStorage.getItem('codeWidth') || (window.innerWidth * 0.3);
+const codeWidth = +window.localStorage.getItem('codeWidth') || (window.innerWidth * 0.3);
 resize({ x: codeWidth });
 
 resizer.addEventListener("mousedown", () => {
@@ -29,7 +37,6 @@ let [zoom, lat, lng] = JSON.parse(window.localStorage.getItem("viewport")) || [
 
 const map = new maplibregl.Map({
     container: 'map',
-    style: 'https://demotiles.maplibre.org/style.json',
     style: {
         version: 8,
         sources: {
@@ -67,7 +74,7 @@ var editor = CodeMirror(document.getElementById("code-container"), {
 
 const query = window.localStorage.getItem('query') || '[out:json][timeout:25];\n\nway["highway"]({{bbox}});\n\nout;>;out skel qt;';
 editor.setValue(query);
-editor.on('change', function () {
+editor.on('change', function() {
     window.localStorage.setItem('query', editor.getValue());
 
     const b = document.getElementById('view-query-button');
@@ -140,9 +147,9 @@ async function run() {
                 );
                 alert(
                     Array.from(dom.body.querySelectorAll("p"))
-                            .slice(1)
-                            .map((p) => p.textContent)
-                            .join("\n")
+                        .slice(1)
+                        .map((p) => p.textContent)
+                        .join("\n")
                 );
             } else {
                 alert(res.error);
@@ -172,7 +179,7 @@ async function run() {
 
 document.querySelector('#run-button').onclick = run;
 document.addEventListener('keydown', (event) => {
-    if((event.ctrlKey || event.metaKey) && event.key == "Enter") {
+    if ((event.ctrlKey || event.metaKey) && event.key == "Enter") {
         run();
     }
 });
@@ -230,8 +237,8 @@ map.on("style.load", () => {
             }
 
             const props = Object.entries(f.properties)
-                                .map(([k, v]) => `${k} = ${v}`)
-                                .join('<br>');
+                .map(([k, v]) => `${k} = ${v}`)
+                .join('<br>');
 
             // this is not accurate but good enough
             const type = f.layer.type == 'fill' ? 'relation' : (f.layer.type == 'line' ? 'way' : 'node');
@@ -245,18 +252,18 @@ map.on("style.load", () => {
             `;
 
             new maplibregl.Popup()
-                            .setLngLat(e.lngLat)
-                            .setHTML(html)
-                            .addTo(map)
-                            .on('close', () => map.setFeatureState(
-                                {source: 'OverpassAPI', id: f.id},
-                                {selected: false}
-                            ));
+                .setLngLat(e.lngLat)
+                .setHTML(html)
+                .addTo(map)
+                .on('close', () => map.setFeatureState(
+                    { source: 'OverpassAPI', id: f.id },
+                    { selected: false }
+                ));
 
             // highlight the current thing
             map.setFeatureState(
-                {source: 'OverpassAPI', id: f.id},
-                {selected: true}
+                { source: 'OverpassAPI', id: f.id },
+                { selected: true }
             );
         };
 
@@ -267,8 +274,8 @@ map.on("style.load", () => {
             // we dont have access to either of those things here sadly so idk if its doable
 
             map.setFeatureState(
-                {source: 'OverpassAPI', id: f.id},
-                {visited: !f.state.visited}
+                { source: 'OverpassAPI', id: f.id },
+                { visited: !f.state.visited }
             );
         }
 
@@ -327,8 +334,8 @@ map.on("style.load", () => {
                 map.addLayer(layer);
 
                 map.on('click', layer.id, openPopup);
-                map.on('mouseenter', layer.id, () => {map.getCanvas().style.cursor = 'pointer';});
-                map.on('mouseleave', layer.id, () => {map.getCanvas().style.cursor = '';});
+                map.on('mouseenter', layer.id, () => { map.getCanvas().style.cursor = 'pointer'; });
+                map.on('mouseleave', layer.id, () => { map.getCanvas().style.cursor = ''; });
 
                 map.on('contextmenu', layer.id, openContextMenu);
             }
@@ -429,7 +436,7 @@ map.on('load', () => {
 
             distanceMeasureGeojson.features.push(linestring);
 
-            distance = (1000 * turf.length(linestring)).toLocaleString();
+            distance = (1000 * turfLength(linestring)).toLocaleString();
         }
 
         map.getSource('distance-measure').setData(distanceMeasureGeojson);
@@ -499,16 +506,16 @@ const geocoderApi = {
         try {
             const request =
                 `https://nominatim.openstreetmap.org/search?q=${
-    config.query
-}&format=geojson&polygon_geojson=1&addressdetails=1`;
+                config.query
+                }&format=geojson&polygon_geojson=1&addressdetails=1`;
             const response = await fetch(request);
             const geojson = await response.json();
             for (const feature of geojson.features) {
                 const center = [
                     feature.bbox[0] +
-            (feature.bbox[2] - feature.bbox[0]) / 2,
+                    (feature.bbox[2] - feature.bbox[0]) / 2,
                     feature.bbox[1] +
-            (feature.bbox[3] - feature.bbox[1]) / 2
+                    (feature.bbox[3] - feature.bbox[1]) / 2
                 ];
                 const point = {
                     type: 'Feature',
@@ -570,7 +577,7 @@ function openModal(content) {
 // done by hand cause it's not a throwaway modal like with openModal
 const settingsButton = document.getElementById('settings-button');
 const settingsModal = document.getElementById('settings-modal');
-settingsButton.onclick = function () {
+settingsButton.onclick = function() {
     settingsModal.style.display = 'flex';
 
     settingsModal.querySelector('span.close').onclick = function() {
@@ -590,6 +597,6 @@ const settings = {
 // TODO we probably want a way to abstract this when we add more settings keys
 const settingsHideEmptyNodes = document.getElementById('settings-hide-empty-nodes');
 settingsHideEmptyNodes.checked = window.localStorage.getItem('settings.hideEmptyNodes') === 'true';
-settingsHideEmptyNodes.onchange = function () {
+settingsHideEmptyNodes.onchange = function() {
     window.localStorage.setItem('settings.hideEmptyNodes', this.checked);
 };

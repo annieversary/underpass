@@ -4,10 +4,10 @@
   "description": "(wip name until we decide on something else)",
   "main": "index.js",
   "scripts": {
-    "build": "esbuild frontend/index.ts --bundle --sourcemap --outfile=public/index.js",
-    "watch": "esbuild frontend/index.ts --bundle --sourcemap --outfile=public/index.js --watch",
-    "typecheck": "tsc -noEmit frontend/index.ts",
-    "prod": "esbuild frontend/index.ts --bundle --minify --outfile=public/index.js && cp frontend/index.html public"
+    "build": "esbuild frontend/index.ts --bundle --sourcemap --target=es2017 --outfile=public/index.js",
+    "watch": "esbuild frontend/index.ts --bundle --sourcemap --target=es2017 --outfile=public/index.js --watch",
+    "typecheck": "tsc -noEmit --lib es2022,DOM --target es2017 --moduleResolution node --skipLibCheck frontend/index.ts",
+    "prod": "esbuild frontend/index.ts --bundle --minify --target=es2017 --outfile=public/index.js && cp frontend/index.html public"
   },
   "author": "",
   "license": "ISC",
@@ -22,8 +22,8 @@
     "@codemirror/view": "^6.21.4",
     "@maplibre/maplibre-gl-geocoder": "^1.5.0",
     "@turf/length": "^6.5.0",
+    "@types/geojson": "^7946.0.12",
     "events": "^3.3.0",
-    "maplibre-gl": "^3.5.2",
-    "tsc": "^2.0.4"
+    "maplibre-gl": "^3.5.2"
   }
 }

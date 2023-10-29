@@ -1,8 +1,9 @@
-import maplibregl from 'maplibre-gl';
+import maplibregl, { MapLayerEventType, GeoJSONSource, AddLayerObject } from 'maplibre-gl';
 import MaplibreGeocoder from '@maplibre/maplibre-gl-geocoder';
 import turfLength from '@turf/length';
+import { GeoJSON, Feature } from 'geojson';
 
-import { EditorView, ViewPlugin, keymap, lineNumbers, rectangularSelection, highlightActiveLine } from "@codemirror/view";
+import { EditorView, ViewPlugin, keymap, lineNumbers, rectangularSelection, highlightActiveLine, ViewUpdate } from "@codemirror/view";
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { closeBrackets } from "@codemirror/autocomplete";
 import { bracketMatching } from "@codemirror/language";
@@ -13,8 +14,8 @@ import '@maplibre/maplibre-gl-geocoder/dist/maplibre-gl-geocoder.css';
 
 // resize
 const resizer = document.querySelector("#resizer");
-const left = document.querySelector("#left");
-const right = document.querySelector("#right");
+const left: HTMLDivElement = document.querySelector("#left");
+const right: HTMLDivElement = document.querySelector("#right");
 
 function resize(e: { x: number }) {
     left.style.width = `${e.x}px`;
@@ -79,9 +80,7 @@ let editor = new EditorView({
         closeBrackets(),
         keymap.of([...defaultKeymap, ...historyKeymap]),
         ViewPlugin.fromClass(class {
-            constructor(_view) { }
-
-            update(_update) {
+            update(_update: ViewUpdate) {
                 window.localStorage.setItem('query', editor.state.doc.toString());
 
                 const b = document.getElementById('view-query-button');
@@ -116,15 +115,19 @@ let resultsDiv = document.querySelector("#results");
 
 // loading modal doesnt use openModal cause we want this custom style which looks nicer imo
 let loading = false;
-let loadingModal = document.querySelector("#loading-modal");
+let loadingModal: HTMLDivElement = document.querySelector("#loading-modal");
+
+function mapSetSource(source: string, data: GeoJSON) {
+    (map.getSource(source) as GeoJSONSource)
+        .setData(data);
+}
 
 async function run() {
     if (loading) return;
     loading = true;
     loadingModal.style.display = 'flex';
 
-    map.getSource("OverpassAPI")
-        .setData({ type: "FeatureCollection", features: [] });
+    mapSetSource('OverpassAPI', { type: "FeatureCollection", features: [] });
 
     try {
         const r = await fetch('/search', {
@@ -132,9 +135,9 @@ async function run() {
             body: JSON.stringify({
                 query: editor.state.doc.toString(),
                 bbox: mapBounds(),
-                road_angle: !document.querySelector('#road-angle-toggle').checked ? null : {
-                    min: +document.querySelector('#road-angle-min').value,
-                    max: +document.querySelector('#road-angle-max').value,
+                road_angle: !document.querySelector<HTMLInputElement>('#road-angle-toggle').checked ? null : {
+                    min: +document.querySelector<HTMLInputElement>('#road-angle-min').value,
+                    max: +document.querySelector<HTMLInputElement>('#road-angle-max').value,
                 },
             }),
             headers: {
@@ -152,7 +155,7 @@ async function run() {
                     .filter(f => !(f.geometry.type == "Point" && Object.keys(f.properties).length == 0));
             }
 
-            map.getSource("OverpassAPI").setData(data);
+            mapSetSource('OverpassAPI', data);
 
             if (res.geocode_areas.length > 0) {
                 const areas = res.geocode_areas.map(a => `${a.original} - <a href="//www.openstreetmap.org/${a.ty}/${a.id}" target="_blank" class="osm-link">${a.name}</a><br/>`).join('');
@@ -196,19 +199,18 @@ async function run() {
     loadingModal.style.display = 'none';
 }
 
-document.querySelector('#run-button').onclick = run;
+document.querySelector<HTMLButtonElement>('#run-button').onclick = run;
 document.addEventListener('keydown', (event) => {
     if ((event.ctrlKey || event.metaKey) && event.key == "Enter") {
         run();
     }
 });
 
-document.querySelector('#clear-button').onclick = () => {
-    map.getSource("OverpassAPI")
-        .setData({ type: "FeatureCollection", features: [] });
+document.querySelector<HTMLButtonElement>('#clear-button').onclick = () => {
+    mapSetSource('OverpassAPI', { type: "FeatureCollection", features: [] });
 };
 
-document.querySelector('#export-button').onclick = () => {
+document.querySelector<HTMLButtonElement>('#export-button').onclick = () => {
     const out = map.getSource("OverpassAPI").serialize();
     if (out.data.features.length == 0) {
         alert('No data to export!');
@@ -216,7 +218,7 @@ document.querySelector('#export-button').onclick = () => {
         download('export.json', out);
     }
 };
-function download(filename, json) {
+function download(filename: string, json: any) {
     var element = document.createElement('a');
     element.setAttribute('href', 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(json)));
     element.setAttribute('download', filename);
@@ -239,21 +241,13 @@ map.on("style.load", () => {
 
         let justOpenedPopup = false;
 
-        const openPopup = (e) => {
+        const openPopup = (e: MapLayerEventType['click'] & Object) => {
             // debounce so we dont open two popups at once with the same click
             if (justOpenedPopup) return;
             justOpenedPopup = true;
             setTimeout(() => justOpenedPopup = false, 100);
 
             const f = e.features[0];
-            const coordinates = f.geometry.coordinates.slice();
-
-            // Ensure that if the map is zoomed out such that multiple
-            // copies of the feature are visible, the popup appears
-            // over the copy being pointed to.
-            while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
-                coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
-            }
 
             const props = Object.entries(f.properties)
                 .map(([k, v]) => `${k} = ${v}`)
@@ -286,7 +280,7 @@ map.on("style.load", () => {
             );
         };
 
-        function openContextMenu(e) {
+        function openContextMenu(e: MapLayerEventType['contextmenu'] & Object) {
             const f = e.features[0];
 
             // TODO add [id, 'node|way|relation'] to a "visited" array
@@ -349,8 +343,8 @@ map.on("style.load", () => {
             },
         ];
         for (const layer of layers) {
-            if (!map.getLayer(layer)) {
-                map.addLayer(layer);
+            if (!map.getLayer(layer.id)) {
+                map.addLayer(layer as AddLayerObject);
 
                 map.on('click', layer.id, openPopup);
                 map.on('mouseenter', layer.id, () => { map.getCanvas().style.cursor = 'pointer'; });
@@ -376,7 +370,7 @@ map.on('mousemove', (e) => {
 // store viewport position in localstorage
 map.on("moveend", () => {
     window.localStorage.setItem("viewport", JSON.stringify([
-        map.getZoom(0), map.getCenter().lat.toFixed(8), map.getCenter().lng.toFixed(8),
+        map.getZoom(), map.getCenter().lat.toFixed(8), map.getCenter().lng.toFixed(8),
     ]));
 });
 
@@ -455,23 +449,22 @@ map.on('load', () => {
 
             distanceMeasureGeojson.features.push(linestring);
 
-            distance = (1000 * turfLength(linestring)).toLocaleString();
+            distance = (1000 * turfLength(linestring as Feature)).toLocaleString();
         }
 
-        map.getSource('distance-measure').setData(distanceMeasureGeojson);
+        mapSetSource('distance-measure', distanceMeasureGeojson as GeoJSON);
     });
 
 });
 
-const distanceButton = document.querySelector('#distance-button');
+const distanceButton = document.querySelector<HTMLButtonElement>('#distance-button');
 function toggleDistance() {
     distanceButton.dataset.on = distanceButton.dataset.on == 'true' ? 'false' : 'true';
 
     const on = distanceButton.dataset.on == 'true';
     if (!on) {
         distance = null;
-        map.getSource("distance-measure")
-            .setData({ type: "FeatureCollection", features: [] });
+        mapSetSource('distance-measure', { type: "FeatureCollection", features: [] });
         distanceMeasureGeojson = {
             'type': 'FeatureCollection',
             'features': []
@@ -486,7 +479,6 @@ distanceButton.onclick = toggleDistance;
 
 // setup keybindings
 const deltaDistance = 100;
-const deltaDegrees = 25;
 function easing(t) {
     return t * (2 - t);
 }
@@ -520,7 +512,7 @@ map.getCanvas().addEventListener(
 
 // search
 const geocoderApi = {
-    forwardGeocode: async (config) => {
+    forwardGeocode: async (config: any) => {
         const features = [];
         try {
             const request =
@@ -567,7 +559,7 @@ map.addControl(
 
 // throwaway modals
 // content: string
-function openModal(content) {
+function openModal(content: string) {
     const modal = document.createElement('div');
     modal.classList.add('modal');
     modal.innerHTML = `
@@ -578,10 +570,10 @@ function openModal(content) {
         </div>
     </div>`;
     document.body.appendChild(modal);
-    modal.querySelector('span.close').onclick = function() {
+    modal.querySelector<HTMLSpanElement>('span.close').onclick = function() {
         modal.remove();
     };
-    window.onclick = function(event) {
+    window.onclick = function(event: MouseEvent) {
         if (event.target == modal) {
             modal.remove();
         }
@@ -599,10 +591,10 @@ const settingsModal = document.getElementById('settings-modal');
 settingsButton.onclick = function() {
     settingsModal.style.display = 'flex';
 
-    settingsModal.querySelector('span.close').onclick = function() {
+    settingsModal.querySelector<HTMLSpanElement>('span.close').onclick = function() {
         settingsModal.style.display = 'none';
     };
-    window.onclick = function(event) {
+    window.onclick = function(event: MouseEvent) {
         if (event.target == settingsModal) {
             settingsModal.style.display = 'none';
         }
@@ -610,12 +602,12 @@ settingsButton.onclick = function() {
 };
 
 const settings = {
-    hideEmptyNodes: () => document.getElementById('settings-hide-empty-nodes').checked,
+    hideEmptyNodes: () => document.querySelector<HTMLInputElement>('#settings-hide-empty-nodes').checked,
 };
 
 // TODO we probably want a way to abstract this when we add more settings keys
-const settingsHideEmptyNodes = document.getElementById('settings-hide-empty-nodes');
+const settingsHideEmptyNodes = document.querySelector<HTMLInputElement>('#settings-hide-empty-nodes');
 settingsHideEmptyNodes.checked = window.localStorage.getItem('settings.hideEmptyNodes') === 'true';
 settingsHideEmptyNodes.onchange = function() {
-    window.localStorage.setItem('settings.hideEmptyNodes', this.checked);
+    window.localStorage.setItem('settings.hideEmptyNodes', settingsHideEmptyNodes.checked.toString());
 };

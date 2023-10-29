@@ -7,7 +7,7 @@ use crate::{
 };
 
 pub async fn preprocess_query(
-    query: String,
+    query: &str,
     bbox: &Bbox,
     nominatim: impl Nominatim,
 ) -> Result<(String, Vec<GeocodeaArea>), SearchError> {
@@ -103,8 +103,7 @@ mod tests {
     async fn test_no_macros_does_nothing() {
         let query = "[out:json][timeout:60];
 node[place=city];
-out;>;out skel qt;"
-            .to_string();
+out;>;out skel qt;";
         let nominatim = MockNominatim::new();
 
         let (processed, _areas) = preprocess_query(query, &Bbox::default(), nominatim)
@@ -123,8 +122,7 @@ out;>;out skel qt;"
     async fn test_out_macro() {
         let query = "[out:json][timeout:60];
 nw[amenity=drinking_water];
-{{out}}"
-            .to_string();
+{{out}}";
         let nominatim = MockNominatim::new();
 
         let (processed, _areas) = preprocess_query(query, &Bbox::default(), nominatim)
@@ -143,8 +141,7 @@ out;>;out skel qt;"
     async fn test_bbox_macro() {
         let query = "[out:json][timeout:60];
 node[amenity=drinking_water]({{bbox}});
-out;>;out skel qt;"
-            .to_string();
+out;>;out skel qt;";
         let nominatim = MockNominatim::new();
 
         let bbox = Bbox {
@@ -167,8 +164,7 @@ out;>;out skel qt;"
         let query = "[out:json][timeout:60];
 node[amenity=bench]->.benches;
 {{aroundSelf.benches:7}}->.benchesAroundOtherBenches;
-out;>;out skel qt;"
-            .to_string();
+out;>;out skel qt;";
         let nominatim = MockNominatim::new();
 
         let (processed, _areas) = preprocess_query(query, &Bbox::default(), nominatim)
@@ -189,8 +185,7 @@ out;>;out skel qt;"
         let query = "[out:json][timeout:60];
 {{geocodeArea:Hokkaido, Japan}}->.japan;
 node[place=city](area.japan);
-{{out}}"
-            .to_string();
+{{out}}";
         let mut nominatim = MockNominatim::new();
 
         nominatim.expect_search().times(1).returning(|_, _| {
@@ -218,8 +213,7 @@ out;>;out skel qt;"
         let query = "[out:json][timeout:60];
 {{geocodeArea:Hokkaido, Japan;Aomori, Japan}}->.japan;
 node[place=city](area.japan);
-{{out}}"
-            .to_string();
+{{out}}";
 
         let mut nominatim = MockNominatim::new();
         nominatim
@@ -261,8 +255,7 @@ out;>;out skel qt;"
         let query = "[out:json][timeout:60];
 {{geocodeArea:Hokkaido, Japan@en;Aomori, Japan@es}}->.japan;
 node[place=city](area.japan);
-{{out}}"
-            .to_string();
+{{out}}";
 
         let mut nominatim = MockNominatim::new();
         nominatim

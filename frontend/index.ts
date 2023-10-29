@@ -6,9 +6,8 @@ import './style.css';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import '@maplibre/maplibre-gl-geocoder/dist/maplibre-gl-geocoder.css';
 
-import { editor as codeEditor } from './codeEditor';
 import { map, mapBounds } from './map';
-import { editor as graphEditor } from './graph';
+import { serializeGraph } from './graph';
 
 // resize
 const resizer = document.querySelector("#resizer");
@@ -58,12 +57,8 @@ async function run() {
         const r = await fetch('/search', {
             method: 'POST',
             body: JSON.stringify({
-                query: codeEditor.state.doc.toString(),
                 bbox: mapBounds(),
-                graph: {
-                    nodes: graphEditor.getNodes(),
-                    connections: graphEditor.getConnections(),
-                }
+                graph: serializeGraph(),
             }),
             headers: {
                 'Content-Type': 'application/json'

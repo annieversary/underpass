@@ -5,27 +5,21 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use thiserror::Error;
 
-use crate::{
-    graph::{process_graph, Graph},
-    nominatim::OsmNominatim,
-    preprocess::preprocess_query,
-};
+use crate::graph::{process_graph, Graph};
 
 pub async fn search(Json(json): Json<SearchParams>) -> Result<Json<SearchResults>, SearchError> {
-    let (query, geocode_areas) = preprocess_query(json.query, &json.bbox, OsmNominatim).await?;
-
-    let collection = process_graph(json.graph, query.clone()).await?;
+    let collection = process_graph(json.graph, json.bbox).await?;
 
     let geojson = GeoJson::FeatureCollection(collection);
 
     Ok(Json(SearchResults {
         data: geojson,
-        query,
-        geocode_areas,
+        query: String::new(),
+        geocode_areas: vec![],
     }))
 }
 
-#[derive(Deserialize, Default)]
+#[derive(Deserialize, Default, Clone, Copy)]
 pub struct Bbox {
     pub ne: [f32; 2],
     pub sw: [f32; 2],
@@ -33,7 +27,6 @@ pub struct Bbox {
 
 #[derive(Deserialize)]
 pub struct SearchParams {
-    query: String,
     bbox: Bbox,
     graph: Graph,
 }
@@ -41,6 +34,7 @@ pub struct SearchParams {
 #[derive(Serialize)]
 pub struct SearchResults {
     pub data: geojson::GeoJson,
+    // TODO this should be a hashmap of Node id to processed query
     pub query: String,
     pub geocode_areas: Vec<GeocodeaArea>,
 }

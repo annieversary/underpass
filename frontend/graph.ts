@@ -1,10 +1,13 @@
+import { editor as codeEditor } from './codeEditor';
+
 import './graph.css';
 
-import { NodeEditor, GetSchemes, ClassicPreset } from "rete";
+import { NodeEditor, GetSchemes, ClassicPreset, getUID } from "rete";
 import { createRoot } from "react-dom/client";
 import { AreaPlugin, AreaExtensions } from "rete-area-plugin";
 import { ReactPlugin, Presets, ReactArea2D } from "rete-react-plugin";
 import { ConnectionPlugin, Presets as ConnectionPresets } from "rete-connection-plugin"
+import { Control } from 'rete/_types/presets/classic';
 
 const container = document.querySelector<HTMLDivElement>('#graph-container');
 
@@ -32,12 +35,25 @@ AreaExtensions.selectableNodes(area, AreaExtensions.selector(), {
 
 AreaExtensions.simpleNodesOrder(area);
 
+
+
+
+const socket = new ClassicPreset.Socket("socket");
+
 async function setup() {
-    const socket = new ClassicPreset.Socket("socket");
     const nodeA = new ClassicPreset.Node("Oql");
     nodeA.addOutput("out", new ClassicPreset.Output(socket));
-    // nodeA.addControl("query", new ClassicPreset.InputControl("text", {}));
+    nodeA.addControl("name", new ClassicPreset.InputControl("text", {
+        initial: "Code block 1"
+    }));
     await editor.addNode(nodeA);
+
+    const nodeOther = new ClassicPreset.Node("Oql");
+    nodeOther.addOutput("out", new ClassicPreset.Output(socket));
+    nodeOther.addControl("name", new ClassicPreset.InputControl("text", {
+        initial: "Code block 2"
+    }));
+    await editor.addNode(nodeOther);
 
     const nodeC = new ClassicPreset.Node("Road Angle Filter");
     nodeC.addInput("in", new ClassicPreset.Input(socket));
@@ -57,6 +73,7 @@ async function setup() {
     await editor.addConnection(new ClassicPreset.Connection(nodeA, "out", nodeC, "in"));
     await editor.addConnection(new ClassicPreset.Connection(nodeC, "out", nodeB, "in"));
 
+    await area.translate(nodeOther.id, { x: 50, y: 200 });
     await area.translate(nodeA.id, { x: 50, y: 0 });
     await area.translate(nodeC.id, { x: 280, y: 0 });
     await area.translate(nodeB.id, { x: 500, y: 0 });
@@ -65,6 +82,25 @@ setup();
 
 export function zoomToNodes() {
     AreaExtensions.zoomAt(area, editor.getNodes());
+}
+
+export function serializeGraph() {
+    const nodes = editor.getNodes();
+
+    for (let i = 0; i < nodes.length; i++) {
+        if (nodes[i].label == "Oql") {
+            nodes[i].controls.query = {
+                id: getUID(),
+                // TODO get the correct codeEditor code or whatever
+                value: codeEditor.state.doc.toString(),
+            } as Control;
+        }
+    }
+
+    return {
+        nodes,
+        connections: editor.getConnections(),
+    };
 }
 
 // TODO add an onchange thing that saves to localstorage

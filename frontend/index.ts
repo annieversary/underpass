@@ -1,4 +1,4 @@
-import { MapLayerEventType, GeoJSONSource, AddLayerObject, Popup } from 'maplibre-gl';
+import { GeoJSONSource } from 'maplibre-gl';
 import turfLength from '@turf/length';
 import { GeoJSON, Feature } from 'geojson';
 
@@ -6,10 +6,9 @@ import './style.css';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import '@maplibre/maplibre-gl-geocoder/dist/maplibre-gl-geocoder.css';
 
-import { editor } from './codeEditor';
+import { editor as codeEditor } from './codeEditor';
 import { map, mapBounds } from './map';
-
-
+import { editor as graphEditor } from './graph';
 
 // resize
 const resizer = document.querySelector("#resizer");
@@ -59,12 +58,16 @@ async function run() {
         const r = await fetch('/search', {
             method: 'POST',
             body: JSON.stringify({
-                query: editor.state.doc.toString(),
+                query: codeEditor.state.doc.toString(),
                 bbox: mapBounds(),
                 road_angle: !document.querySelector<HTMLInputElement>('#road-angle-toggle').checked ? null : {
                     min: +document.querySelector<HTMLInputElement>('#road-angle-min').value,
                     max: +document.querySelector<HTMLInputElement>('#road-angle-max').value,
                 },
+                graph: {
+                    nodes: graphEditor.getNodes(),
+                    connections: graphEditor.getConnections(),
+                }
             }),
             headers: {
                 'Content-Type': 'application/json'

@@ -24,6 +24,14 @@
     "@turf/length": "^6.5.0",
     "@types/geojson": "^7946.0.12",
     "events": "^3.3.0",
-    "maplibre-gl": "^3.5.2"
+    "maplibre-gl": "^3.5.2",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "rete": "^2.0.2",
+    "rete-area-plugin": "^2.0.1",
+    "rete-connection-plugin": "^2.0.0",
+    "rete-react-plugin": "^2.0.4",
+    "rete-render-utils": "^2.0.1",
+    "styled-components": "^6.1.0"
   }
 }

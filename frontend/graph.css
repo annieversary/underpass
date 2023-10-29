@@ -1,4 +1,6 @@
 #graph-container {
-    height: 50vh;
+    height: 70vh;
     position: relative;
+
+    background-color: aliceblue;
 }

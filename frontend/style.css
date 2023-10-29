@@ -68,12 +68,6 @@ body {
     padding: 0;
 }
 
-#code-container {
-    flex: 1;
-}
-#code-container > div {
-    height: 100%;
-}
 
 #right {
     width: 70%;

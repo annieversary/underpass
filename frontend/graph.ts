@@ -1,4 +1,4 @@
-import { editor as codeEditor } from './codeEditor';
+import { addTab, codeEditorMap } from './codeEditor';
 
 import './graph.css';
 
@@ -29,8 +29,10 @@ const connection = new ConnectionPlugin<Schemes, AreaExtra>();
 connection.addPreset(ConnectionPresets.classic.setup())
 area.use(connection);
 
-AreaExtensions.selectableNodes(area, AreaExtensions.selector(), {
-    accumulating: AreaExtensions.accumulateOnCtrl()
+const nodeSelector = AreaExtensions.selectableNodes(area, AreaExtensions.selector(), {
+    accumulating: {
+        active: () => false,
+    }
 });
 
 AreaExtensions.simpleNodesOrder(area);
@@ -40,20 +42,43 @@ AreaExtensions.simpleNodesOrder(area);
 
 const socket = new ClassicPreset.Socket("socket");
 
-async function setup() {
+let codeBlockCount = 1;
+async function oqlNode(selected: boolean): Promise<ClassicPreset.Node> {
     const nodeA = new ClassicPreset.Node("Oql");
     nodeA.addOutput("out", new ClassicPreset.Output(socket));
-    nodeA.addControl("name", new ClassicPreset.InputControl("text", {
-        initial: "Code block 1"
-    }));
     await editor.addNode(nodeA);
 
-    const nodeOther = new ClassicPreset.Node("Oql");
-    nodeOther.addOutput("out", new ClassicPreset.Output(socket));
-    nodeOther.addControl("name", new ClassicPreset.InputControl("text", {
-        initial: "Code block 2"
+    const name = `Code block ${codeBlockCount}`;
+    const tab = addTab(nodeA.id, name, selected, () => {
+        nodeSelector.select(nodeA.id, false);
+    });
+
+    nodeA.addControl("name", new ClassicPreset.InputControl("text", {
+        initial: name,
+        change(value) {
+            tab.innerHTML = `<p>${value}</p>`;
+        }
     }));
-    await editor.addNode(nodeOther);
+
+    codeBlockCount++;
+
+    return nodeA;
+}
+
+// on node selected, select also that tab
+area.addPipe(context => {
+    if (context.type === 'nodepicked') {
+        const id = context.data.id;
+        const tab = document.querySelector<HTMLDivElement>(`.tab[data-node-id="${id}"]`);
+        if (tab) tab.onclick(new MouseEvent(''));
+    }
+
+    return context
+})
+
+async function setup() {
+    const nodeA = await oqlNode(true);
+    const nodeOther = await oqlNode(false);
 
     const nodeC = new ClassicPreset.Node("Road Angle Filter");
     nodeC.addInput("in", new ClassicPreset.Input(socket));
@@ -73,10 +98,10 @@ async function setup() {
     await editor.addConnection(new ClassicPreset.Connection(nodeA, "out", nodeC, "in"));
     await editor.addConnection(new ClassicPreset.Connection(nodeC, "out", nodeB, "in"));
 
-    await area.translate(nodeOther.id, { x: 50, y: 200 });
-    await area.translate(nodeA.id, { x: 50, y: 0 });
-    await area.translate(nodeC.id, { x: 280, y: 0 });
-    await area.translate(nodeB.id, { x: 500, y: 0 });
+    await area.translate(nodeOther.id, { x: 50, y: 300 });
+    await area.translate(nodeA.id, { x: 50, y: 100 });
+    await area.translate(nodeC.id, { x: 280, y: 100 });
+    await area.translate(nodeB.id, { x: 500, y: 100 });
 }
 setup();
 
@@ -91,8 +116,7 @@ export function serializeGraph() {
         if (nodes[i].label == "Oql") {
             nodes[i].controls.query = {
                 id: getUID(),
-                // TODO get the correct codeEditor code or whatever
-                value: codeEditor.state.doc.toString(),
+                value: codeEditorMap[nodes[i].id].state.doc.toString(),
             } as Control;
         }
     }

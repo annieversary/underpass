@@ -1,0 +1,29 @@
+#code-tabs {
+    display: flex;
+    flex-direction: row;
+}
+
+#code-tabs .tab {
+    padding: 0.2rem 1rem;
+    background-color: grey;
+    color: white;
+}
+#code-tabs .tab[data-selected="yes"] {
+    background-color: black;
+}
+
+#code-container {
+    height: 30vh;
+}
+#code-container .code-editor {
+    flex: 1;
+    display: none;
+    height: 100%;
+}
+#code-container .code-editor[data-selected="yes"] {
+    display: flex;
+}
+#code-container .code-editor > div {
+    height: 100%;
+    width: 100%;
+}

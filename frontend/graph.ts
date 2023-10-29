@@ -34,8 +34,9 @@ AreaExtensions.simpleNodesOrder(area);
 
 async function setup() {
     const socket = new ClassicPreset.Socket("socket");
-    const nodeA = new ClassicPreset.Node("OQL");
+    const nodeA = new ClassicPreset.Node("Oql");
     nodeA.addOutput("out", new ClassicPreset.Output(socket));
+    // nodeA.addControl("query", new ClassicPreset.InputControl("text", {}));
     await editor.addNode(nodeA);
 
     const nodeC = new ClassicPreset.Node("Road Angle Filter");
@@ -71,3 +72,5 @@ export function zoomToNodes() {
 // https://codesandbox.io/s/rete-js-v2-import-export-999y8z?file=/src/index.ts
 
 // TODO add like buttons to insert nodes and stuff
+
+// TODO make map node not deletable

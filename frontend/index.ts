@@ -60,10 +60,6 @@ async function run() {
             body: JSON.stringify({
                 query: codeEditor.state.doc.toString(),
                 bbox: mapBounds(),
-                road_angle: !document.querySelector<HTMLInputElement>('#road-angle-toggle').checked ? null : {
-                    min: +document.querySelector<HTMLInputElement>('#road-angle-min').value,
-                    max: +document.querySelector<HTMLInputElement>('#road-angle-max').value,
-                },
                 graph: {
                     nodes: graphEditor.getNodes(),
                     connections: graphEditor.getConnections(),

@@ -7,6 +7,7 @@ use axum::{
     Router,
 };
 
+mod graph;
 mod nominatim;
 mod osm_to_geojson;
 mod preprocess;

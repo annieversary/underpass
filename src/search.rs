@@ -6,44 +6,23 @@ use serde_json::json;
 use thiserror::Error;
 
 use crate::{
+    graph::{process_graph, Graph},
     nominatim::OsmNominatim,
-    osm_to_geojson::{osm_to_geojson, Osm},
     preprocess::preprocess_query,
-    road_angle,
 };
 
 pub async fn search(Json(json): Json<SearchParams>) -> Result<Json<SearchResults>, SearchError> {
     let (query, geocode_areas) = preprocess_query(json.query, &json.bbox, OsmNominatim).await?;
 
-    // println!("{}", &query);
+    let collection = process_graph(json.graph, query.clone()).await?;
 
-    let client = reqwest::Client::new();
-    let res = client
-        .post("https://overpass-api.de/api/interpreter")
-        .body(query.clone())
-        .send()
-        .await?;
+    let geojson = GeoJson::FeatureCollection(collection);
 
-    if res.status() == 200 {
-        let osm: Osm = res.json().await.map_err(SearchError::JsonParse)?;
-
-        let mut collection = osm_to_geojson(osm);
-
-        if let Some(RoadAngle { min, max }) = json.road_angle {
-            collection = road_angle::filter(collection, min, max)?;
-        }
-
-        let geojson = GeoJson::FeatureCollection(collection);
-
-        Ok(Json(SearchResults {
-            data: geojson,
-            query,
-            geocode_areas,
-        }))
-    } else {
-        let res = res.text().await?;
-        Err(SearchError::Syntax { error: res, query })
-    }
+    Ok(Json(SearchResults {
+        data: geojson,
+        query,
+        geocode_areas,
+    }))
 }
 
 #[derive(Deserialize, Default)]
@@ -56,15 +35,7 @@ pub struct Bbox {
 pub struct SearchParams {
     query: String,
     bbox: Bbox,
-
-    road_angle: Option<RoadAngle>,
-    // we probably want like a list of Filter nodes or smth
-}
-
-#[derive(Deserialize)]
-pub struct RoadAngle {
-    min: f64,
-    max: f64,
+    graph: Graph,
 }
 
 #[derive(Serialize)]

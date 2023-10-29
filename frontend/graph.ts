@@ -109,4 +109,4 @@ export function serializeGraph() {
 
 // TODO add like buttons to insert nodes and stuff
 
-// TODO make map node not deletable
+// TODO make Map node not deletable

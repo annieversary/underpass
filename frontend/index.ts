@@ -98,16 +98,18 @@ async function run() {
             }
         }
 
-        if ("query" in res) {
-            let button = document.getElementById('view-query-button');
-            if (!button) {
-                button = document.createElement('button');
-                button.innerHTML = 'View query';
-                button.id = 'view-query-button';
-                document.getElementById('header-buttons').appendChild(button);
-            }
-            button.onclick = () => openModal(`<pre>${res.query}</pre>`);
-        }
+        // TODO make view query work with multiple nodes
+        // probably as a context menu in Oql nodes
+        // if ("query" in res) {
+        //     let button = document.getElementById('view-query-button');
+        //     if (!button) {
+        //         button = document.createElement('button');
+        //         button.innerHTML = 'View query';
+        //         button.id = 'view-query-button';
+        //         document.getElementById('header-buttons').appendChild(button);
+        //     }
+        //     button.onclick = () => openModal(`<pre>${res.query}</pre>`);
+        // }
     } catch (e) {
         console.error(e);
         if (e instanceof TypeError) {

@@ -19,6 +19,7 @@ rand = "0.8.5"
 async-trait = "0.1.74"
 geo = "0.26.0"
 async-recursion = "1.0.5"
+petgraph = "0.6.4"
 
 [dev-dependencies]
 mockall = "0.11.2"

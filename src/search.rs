@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use axum::response::{IntoResponse, Json};
 use geojson::GeoJson;
 use reqwest::StatusCode;
@@ -8,14 +10,14 @@ use thiserror::Error;
 use crate::graph::{process_graph, Graph};
 
 pub async fn search(Json(json): Json<SearchParams>) -> Result<Json<SearchResults>, SearchError> {
-    let collection = process_graph(json.graph, json.bbox).await?;
+    let result = process_graph(json.graph, json.bbox).await?;
 
-    let geojson = GeoJson::FeatureCollection(collection);
+    let geojson = GeoJson::FeatureCollection(result.collection);
 
     Ok(Json(SearchResults {
         data: geojson,
-        query: String::new(),
-        geocode_areas: vec![],
+        processed_queries: result.processed_queries,
+        geocode_areas: result.geocode_areas,
     }))
 }
 
@@ -34,8 +36,8 @@ pub struct SearchParams {
 #[derive(Serialize)]
 pub struct SearchResults {
     pub data: geojson::GeoJson,
-    // TODO this should be a hashmap of Node id to processed query
-    pub query: String,
+    /// Node Id -> Processed query
+    pub processed_queries: HashMap<String, String>,
     pub geocode_areas: Vec<GeocodeaArea>,
 }
 
@@ -57,6 +59,8 @@ pub enum SearchError {
     Syntax { error: String, query: String },
     #[error("Nominatim: {0}")]
     Nominatim(String),
+    #[error("The provided graph contains a cycle")]
+    CyclicalGraph,
     #[error("Road angle: {0}")]
     RoadAngle(String),
 }

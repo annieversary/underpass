@@ -7,7 +7,7 @@ import './codeEditor.css';
 
 const codeContainer = document.querySelector<HTMLDivElement>("#code-container");
 
-function newEditor(parent: HTMLDivElement): EditorView {
+function newEditor(parent: HTMLDivElement, query: string, saveGraph: () => void): EditorView {
     let editor = new EditorView({
         extensions: [
             history(),
@@ -19,21 +19,12 @@ function newEditor(parent: HTMLDivElement): EditorView {
             keymap.of([...defaultKeymap, ...historyKeymap]),
             ViewPlugin.fromClass(class {
                 update(_update: ViewUpdate) {
-                    // window.localStorage.setItem('query', editor.state.doc.toString());
-
-                    // const b = document.getElementById('view-query-button');
-                    // if (b) {
-                    //     b.remove();
-                    // }
-
-                    // TODO do something about this
+                    saveGraph();
                 }
             }),
         ],
         parent,
     });
-
-    const query = '[out:json][timeout:25];\n\nway["highway"]({{bbox}});\n\nout;>;out skel qt;';
 
     editor.dispatch({
         changes: { from: 0, to: editor.state.doc.length, insert: query }
@@ -46,13 +37,20 @@ export const codeEditorMap = {};
 
 const tabsEl = document.querySelector<HTMLDivElement>('#code-tabs');
 
-export function addTab(id: string, name: string, selected: boolean, onclick: () => void): HTMLDivElement {
+export function addTab(
+    id: string,
+    name: string,
+    selected: boolean,
+    onclick: () => void,
+    saveGraph: () => void,
+    query: string = '[out:json][timeout:25];\n\nway[highway]({{bbox}});\n\n{{out}}',
+): HTMLDivElement {
     // create code editor
     const editor = document.createElement('div');
     editor.classList.add('code-editor')
     editor.dataset.nodeId = id;
     editor.dataset.selected = selected ? 'yes' : 'no';
-    codeEditorMap[id] = newEditor(editor);
+    codeEditorMap[id] = newEditor(editor, query, saveGraph);
     codeContainer.appendChild(editor);
 
     // create the tab

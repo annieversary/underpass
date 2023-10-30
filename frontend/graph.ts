@@ -10,6 +10,8 @@ import { ConnectionPlugin, Presets as ConnectionPresets } from "rete-connection-
 import { Control } from 'rete/_types/presets/classic';
 import { ContextMenuPlugin } from "rete-context-menu-plugin";
 
+import { Control as ControlComponent } from './Control';
+
 const container = document.querySelector<HTMLDivElement>('#graph-container');
 
 type Schemes = GetSchemes<
@@ -22,7 +24,14 @@ export const editor = new NodeEditor<Schemes>();
 type AreaExtra = ReactArea2D<Schemes>;
 export const area = new AreaPlugin<Schemes, AreaExtra>(container);
 const render = new ReactPlugin<Schemes, AreaExtra>({ createRoot });
-render.addPreset(Presets.classic.setup());
+render.addPreset(Presets.classic.setup({
+    customize: {
+        control: (p) => {
+            console.log(p);
+            return ControlComponent;
+        }
+    }
+}));
 editor.use(area);
 area.use(render);
 
@@ -208,9 +217,8 @@ function map(): ClassicPreset.Node {
     return nodeB;
 }
 
-
 export function serializeGraph() {
-    const nodes: any[] = editor.getNodes();
+    const nodes: any[] = JSON.parse(JSON.stringify(editor.getNodes()));
 
     for (let i = 0; i < nodes.length; i++) {
         // set the position so we can use it when loading the graph from localStorage

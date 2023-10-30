@@ -1,4 +1,4 @@
-import { addTab, codeEditorMap } from './codeEditor';
+import { addTab, codeEditorMap, removeTab } from './codeEditor';
 
 import './graph.css';
 
@@ -8,6 +8,7 @@ import { AreaPlugin, AreaExtensions } from "rete-area-plugin";
 import { ReactPlugin, Presets, ReactArea2D } from "rete-react-plugin";
 import { ConnectionPlugin, Presets as ConnectionPresets } from "rete-connection-plugin"
 import { Control } from 'rete/_types/presets/classic';
+import { ContextMenuPlugin } from "rete-context-menu-plugin";
 
 const container = document.querySelector<HTMLDivElement>('#graph-container');
 
@@ -37,6 +38,95 @@ const nodeSelector = AreaExtensions.selectableNodes(area, AreaExtensions.selecto
 
 AreaExtensions.simpleNodesOrder(area);
 
+// list addable nodes here
+const nodeList = [
+    ["Oql", () => oqlNode(true)],
+    ["Road Angle Filter", roadAngleFilter],
+];
+const contextMenu = new ContextMenuPlugin<Schemes>({
+    items(context, plugin) {
+        if (context === 'root') {
+            const nodeGenerators = nodeList.map(([label, factory], i) => {
+                if (typeof factory != 'function') return;
+                return {
+                    label,
+                    key: i.toString(),
+                    async handler() {
+                        const node = factory();
+                        await editor.addNode(node)
+                        area.translate(node.id, area.area.pointer)
+                    }
+                };
+            });
+
+            return {
+                searchBar: true,
+                list: [
+                    ...nodeGenerators,
+                    {
+                        label: 'Tools', key: '1', handler: () => null,
+                        subitems: [
+                            {
+                                label: 'Clear graph',
+                                key: '1',
+                                handler: async () => {
+                                    const connections = editor.getConnections();
+                                    for (const connection of connections) {
+                                        await editor.removeConnection(connection.id);
+                                    }
+                                    const nodes = editor.getNodes();
+                                    for (const n of nodes) {
+                                        if (n.label == 'Map') continue;
+                                        await editor.removeNode(n.id);
+                                    }
+                                }
+                            }
+                        ]
+                    },
+                ],
+            };
+        } else if ("label" in context) {
+            if (context.label === 'Map') {
+                return {
+                    searchBar: false,
+                    list: []
+                };
+            }
+
+            return {
+                searchBar: false,
+                list: [
+                    {
+                        label: 'Delete',
+                        key: 'delete',
+                        async handler() {
+                            const nodeId = context.id
+                            const connections = editor.getConnections().filter(c => {
+                                return c.source === nodeId || c.target === nodeId
+                            })
+
+                            for (const connection of connections) {
+                                await editor.removeConnection(connection.id)
+                            }
+                            await editor.removeNode(nodeId)
+                        }
+                    }
+                ]
+            }
+        }
+
+        return {
+            searchBar: false,
+            list: []
+        }
+    }
+});
+
+render.addPreset(Presets.contextMenu.setup());
+area.use(contextMenu);
+
+
+
 
 
 export function zoomToNodes() {
@@ -50,26 +140,32 @@ const socket = new ClassicPreset.Socket("socket");
 
 // on node selected, select also that tab
 area.addPipe(context => {
+    // selecting an oql node also selects the corresponding code editor tab
     if (context.type === 'nodepicked') {
         const id = context.data.id;
         const tab = document.querySelector<HTMLDivElement>(`.tab[data-node-id="${id}"]`);
         if (tab) tab.onclick(new MouseEvent(''));
     }
 
+    // delete tab and code editor when deleting oql nodes
+    if (context.type == 'noderemoved') {
+        if (context.data.label == "Oql") {
+            removeTab(context.data.id);
+        }
+    }
+
     if (saveEvents.includes(context.type)) {
         saveGraph();
     }
 
-    // TODO serialize if it's not a mouse moving event
-
     return context
 });
 
-let codeBlockCount = 1;
-async function oqlNode(selected: boolean): Promise<ClassicPreset.Node> {
+function oqlNode(selected: boolean): ClassicPreset.Node {
     const nodeA = new ClassicPreset.Node("Oql");
     nodeA.addOutput("out", new ClassicPreset.Output(socket));
-    await editor.addNode(nodeA);
+
+    const codeBlockCount = editor.getNodes().filter(n => n.label == "Oql").length + 1;
 
     const name = `Code block ${codeBlockCount}`;
     const tab = addTab(nodeA.id, name, selected, () => {
@@ -84,12 +180,10 @@ async function oqlNode(selected: boolean): Promise<ClassicPreset.Node> {
         }
     }));
 
-    codeBlockCount++;
-
     return nodeA;
 }
 
-async function roadAngleFilter(): Promise<ClassicPreset.Node> {
+function roadAngleFilter(): ClassicPreset.Node {
     const nodeC = new ClassicPreset.Node("Road Angle Filter");
     nodeC.addInput("in", new ClassicPreset.Input(socket));
     nodeC.addOutput("out", new ClassicPreset.Output(socket));
@@ -105,14 +199,12 @@ async function roadAngleFilter(): Promise<ClassicPreset.Node> {
             saveGraph();
         }
     }));
-    await editor.addNode(nodeC);
     return nodeC;
 }
 
-async function map(): Promise<ClassicPreset.Node> {
+function map(): ClassicPreset.Node {
     const nodeB = new ClassicPreset.Node("Map");
     nodeB.addInput("in", new ClassicPreset.Input(socket));
-    await editor.addNode(nodeB);
     return nodeB;
 }
 
@@ -121,7 +213,7 @@ export function serializeGraph() {
     const nodes: any[] = editor.getNodes();
 
     for (let i = 0; i < nodes.length; i++) {
-        // TODO add node position here
+        // set the position so we can use it when loading the graph from localStorage
         nodes[i].position = area.nodeViews.get(nodes[i].id).position;
 
         // add query as a control if this is an oql node
@@ -237,12 +329,15 @@ async function loadGraph() {
 loadGraph();
 
 async function createDefaultGraph() {
-    const nodeA = await oqlNode(true);
-    const nodeOther = await oqlNode(false);
+    const nodeA = oqlNode(true);
+    const nodeOther = oqlNode(false);
+    const nodeC = roadAngleFilter();
+    const nodeB = map();
 
-    const nodeC = await roadAngleFilter();
-
-    const nodeB = await map();
+    await editor.addNode(nodeA);
+    await editor.addNode(nodeOther);
+    await editor.addNode(nodeB);
+    await editor.addNode(nodeC);
 
     await editor.addConnection(new ClassicPreset.Connection(nodeA, "out", nodeC, "in"));
     await editor.addConnection(new ClassicPreset.Connection(nodeC, "out", nodeB, "in"));

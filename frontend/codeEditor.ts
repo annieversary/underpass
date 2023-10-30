@@ -79,3 +79,15 @@ export function addTab(
 
     return tab;
 }
+
+export function removeTab(id: string) {
+    codeEditorMap[id]?.destroy();
+    const tab = document.querySelector<HTMLDivElement>(`.tab[data-node-id="${id}"]`);
+    const wasSelected = tab.dataset.selected === 'yes';
+    tab?.remove();
+
+    if (wasSelected) {
+        const newSelected = document.querySelector<HTMLDivElement>(`.tab`);
+        newSelected?.onclick(new MouseEvent(''));
+    }
+}

@@ -46,9 +46,6 @@ pub async fn process_graph(graph: Graph, bbox: Bbox) -> Result<GraphResult, Sear
         .id
         .clone();
 
-    let mut geocode_areas = vec![];
-    let mut processed_queries = HashMap::new();
-
     let Some(con) = graph.connections.iter().find(|c| c.target == map_id) else {
         return Ok(GraphResult::default());
     };
@@ -56,128 +53,127 @@ pub async fn process_graph(graph: Graph, bbox: Bbox) -> Result<GraphResult, Sear
         .get(&con.source)
         .ok_or(GraphError::ConnectionNodeMissing)?;
 
-    let collection = process_node(
-        prev,
-        &nodes,
-        &graph.connections,
+    let mut np = NodeProcessor {
+        nodes: &nodes,
+        connections: graph.connections,
         bbox,
-        &mut geocode_areas,
-        &mut processed_queries,
-    )
-    .await?;
+        geocode_areas: vec![],
+        processed_queries: Default::default(),
+        memory: Default::default(),
+    };
+
+    let collection = np.process_node(prev).await?;
 
     Ok(GraphResult {
         collection,
-        geocode_areas,
-        processed_queries,
+        geocode_areas: np.geocode_areas,
+        processed_queries: np.processed_queries,
     })
 }
 
-#[async_recursion::async_recursion]
-async fn process_node(
-    n: &GraphNode,
-    nodes: &BTreeMap<String, &GraphNode>,
-    connections: &[GraphConnection],
+struct NodeProcessor<'a> {
+    // i dont think these two lifetimes are the same but meh
+    nodes: &'a BTreeMap<String, &'a GraphNode>,
+    connections: Vec<GraphConnection>,
     bbox: Bbox,
-    geocode_areas: &mut Vec<GeocodeaArea>,
-    processed_queries: &mut HashMap<String, String>,
-) -> Result<FeatureCollection, SearchError> {
-    match &n.node {
-        GraphNodeInternal::RoadAngleFilter { min, max } => {
-            let con = connections
-                .iter()
-                .find(|c| c.target == n.id)
-                .ok_or_else(|| GraphError::InputMissing {
-                    node_id: n.id.clone(),
-                })?;
+    geocode_areas: Vec<GeocodeaArea>,
+    processed_queries: HashMap<String, String>,
+    memory: HashMap<String, FeatureCollection>,
+}
 
-            let prev = nodes
-                .get(&con.source)
-                .ok_or(GraphError::ConnectionNodeMissing)?;
-            let collection = process_node(
-                prev,
-                nodes,
-                connections,
-                bbox,
-                geocode_areas,
-                processed_queries,
-            )
-            .await?;
-            let res = road_angle::filter(collection, min.value, max.value)?;
-            Ok(res)
+impl<'a> NodeProcessor<'a> {
+    #[async_recursion::async_recursion]
+    async fn process_node(&mut self, n: &GraphNode) -> Result<FeatureCollection, SearchError> {
+        if let Some(res) = self.memory.get(&n.id) {
+            return Ok(res.clone());
         }
-        GraphNodeInternal::Oql { query } => {
-            let (query, found_areas) = preprocess_query(&query.value, &bbox, OsmNominatim).await?;
 
-            let client = reqwest::Client::new();
-            let res = client
-                .post("https://overpass-api.de/api/interpreter")
-                .body(query.clone())
-                .send()
-                .await?;
+        let res: Result<FeatureCollection, SearchError> = match &n.node {
+            GraphNodeInternal::RoadAngleFilter { min, max } => {
+                let con = self
+                    .connections
+                    .iter()
+                    .find(|c| c.target == n.id)
+                    .ok_or_else(|| GraphError::InputMissing {
+                        node_id: n.id.clone(),
+                    })?;
 
-            if res.status() == 200 {
-                let osm: Osm = res.json().await.map_err(SearchError::JsonParse)?;
-
-                geocode_areas.extend(found_areas);
-                processed_queries.insert(n.id.clone(), query);
-
-                Ok(osm_to_geojson(osm))
-            } else {
-                let res = res.text().await?;
-                Err(GraphError::OqlSyntax {
-                    node_id: n.id.clone(),
-                    error: res,
-                    query,
-                }
-                .into())
+                let prev = self
+                    .nodes
+                    .get(&con.source)
+                    .ok_or(GraphError::ConnectionNodeMissing)?;
+                let collection = self.process_node(prev).await?;
+                let res = road_angle::filter(collection, min.value, max.value, &n.id)?;
+                Ok(res)
             }
-        }
-        // not actually implemented
-        GraphNodeInternal::InViewOf {} => {
-            let input_con = connections
-                .iter()
-                .find(|c| c.target == n.id && c.target_input == "in")
-                .ok_or_else(|| GraphError::InputMissing {
-                    node_id: n.id.clone(),
-                })?;
-            let input_prev = nodes
-                .get(&input_con.source)
-                .ok_or(GraphError::ConnectionNodeMissing)?;
-            let _input_collection = process_node(
-                input_prev,
-                nodes,
-                connections,
-                bbox,
-                geocode_areas,
-                processed_queries,
-            )
-            .await?;
+            GraphNodeInternal::Oql { query } => {
+                let (query, found_areas) =
+                    preprocess_query(&query.value, &self.bbox, OsmNominatim).await?;
 
-            let aux_con = connections
-                .iter()
-                .find(|c| c.target == n.id && c.target_input == "aux")
-                .ok_or_else(|| GraphError::InputMissing {
-                    node_id: n.id.clone(),
-                })?;
-            let aux_prev = nodes
-                .get(&aux_con.source)
-                .ok_or(GraphError::ConnectionNodeMissing)?;
-            let _aux_collection = process_node(
-                aux_prev,
-                nodes,
-                connections,
-                bbox,
-                geocode_areas,
-                processed_queries,
-            )
-            .await?;
+                let client = reqwest::Client::new();
+                let res = client
+                    .post("https://overpass-api.de/api/interpreter")
+                    .body(query.clone())
+                    .send()
+                    .await?;
 
-            // TODO filter input_collection by whether it can see the aux_collection
+                if res.status() == 200 {
+                    let osm: Osm = res.json().await.map_err(SearchError::JsonParse)?;
 
-            todo!()
-        }
-        GraphNodeInternal::Map {} => unreachable!(),
+                    self.geocode_areas.extend(found_areas);
+                    self.processed_queries.insert(n.id.clone(), query);
+
+                    Ok(osm_to_geojson(osm))
+                } else {
+                    let res = res.text().await?;
+                    Err(GraphError::OqlSyntax {
+                        node_id: n.id.clone(),
+                        error: res,
+                        query,
+                    }
+                    .into())
+                }
+            }
+            // not actually implemented
+            GraphNodeInternal::InViewOf {} => {
+                let input_con = self
+                    .connections
+                    .iter()
+                    .find(|c| c.target == n.id && c.target_input == "in")
+                    .ok_or_else(|| GraphError::InputMissing {
+                        node_id: n.id.clone(),
+                    })?;
+                let input_prev = self
+                    .nodes
+                    .get(&input_con.source)
+                    .ok_or(GraphError::ConnectionNodeMissing)?;
+                let _input_collection = self.process_node(input_prev).await?;
+
+                let aux_con = self
+                    .connections
+                    .iter()
+                    .find(|c| c.target == n.id && c.target_input == "aux")
+                    .ok_or_else(|| GraphError::InputMissing {
+                        node_id: n.id.clone(),
+                    })?;
+                let aux_prev = self
+                    .nodes
+                    .get(&aux_con.source)
+                    .ok_or(GraphError::ConnectionNodeMissing)?;
+                let _aux_collection = self.process_node(aux_prev).await?;
+
+                // TODO filter input_collection by whether it can see the aux_collection
+
+                todo!()
+            }
+            GraphNodeInternal::Map {} => unreachable!(),
+        };
+
+        let res = res?;
+
+        self.memory.insert(n.id.clone(), res.clone());
+
+        Ok(res)
     }
 }
 

@@ -6,13 +6,14 @@ pub fn filter(
     collection: FeatureCollection,
     min: f64,
     max: f64,
+    node_id: &str,
 ) -> Result<FeatureCollection, GraphError> {
     // TODO add client-side validation too
+
     if min > max {
         Err(GraphError::RoadAngle {
             message: "The min flag has a greater value than the max flag!".to_string(),
-            // TODO
-            node_id: todo!(),
+            node_id: node_id.to_string(),
         })?;
     }
 

@@ -1,4 +1,4 @@
-use crate::search::SearchError;
+use crate::search::GraphError;
 use geo::{GeodesicBearing, Point};
 use geojson::{Feature, FeatureCollection, Value};
 
@@ -6,12 +6,14 @@ pub fn filter(
     collection: FeatureCollection,
     min: f64,
     max: f64,
-) -> Result<FeatureCollection, SearchError> {
+) -> Result<FeatureCollection, GraphError> {
     // TODO add client-side validation too
     if min > max {
-        return Err(SearchError::RoadAngle(
-            "The min flag has a greater value than the max flag!".to_string(),
-        ));
+        Err(GraphError::RoadAngle {
+            message: "The min flag has a greater value than the max flag!".to_string(),
+            // TODO
+            node_id: todo!(),
+        })?;
     }
 
     let ways =

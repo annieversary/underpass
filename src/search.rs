@@ -55,27 +55,52 @@ pub enum SearchError {
     Network(#[from] reqwest::Error),
     #[error("json parse error")]
     JsonParse(reqwest::Error),
-    #[error("{error}")]
-    Syntax { error: String, query: String },
     #[error("Nominatim: {0}")]
     Nominatim(String),
+    #[error("{0}")]
+    Graph(#[from] GraphError),
+}
+
+#[derive(Error, Debug)]
+pub enum GraphError {
+    #[error("Connection refers to a non-existing node")]
+    ConnectionNodeMissing,
     #[error("The provided graph contains a cycle")]
-    CyclicalGraph,
-    #[error("Road angle: {0}")]
-    RoadAngle(String),
+    Cycle,
+    #[error("Graph is missing a Map node")]
+    MapMissing,
+    #[error("Node has no input")]
+    InputMissing { node_id: String },
+    #[error("Node requires an input but it has none")]
+    OqlSyntax {
+        node_id: String,
+        error: String,
+        query: String,
+    },
+    #[error("Road angle: {message}")]
+    RoadAngle { message: String, node_id: String },
 }
 
 impl IntoResponse for SearchError {
     fn into_response(self) -> axum::response::Response {
         let mut json = json!({
             "error": format!("{self}"),
-            "format": if matches!(self, Self::Syntax{ .. }) { "xml" } else { "text" },
+            "format": if matches!(self, Self::Graph(GraphError::OqlSyntax{ .. })) { "xml" } else { "text" },
         });
-        if let Self::Syntax { query, .. } = self {
-            json.as_object_mut()
-                .unwrap()
-                .insert("query".to_string(), query.into());
+
+        let map = json.as_object_mut().unwrap();
+
+        match &self {
+            Self::Graph(GraphError::OqlSyntax { query, node_id, .. }) => {
+                map.insert("query".to_string(), query.clone().into());
+                map.insert("node_id".to_string(), node_id.clone().into());
+            }
+            Self::Graph(GraphError::InputMissing { node_id, .. }) => {
+                map.insert("node_id".to_string(), node_id.clone().into());
+            }
+            _ => {}
         }
+
         (StatusCode::INTERNAL_SERVER_ERROR, Json(json)).into_response()
     }
 }

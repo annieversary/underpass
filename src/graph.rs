@@ -8,7 +8,7 @@ use crate::{
     osm_to_geojson::{osm_to_geojson, Osm},
     preprocess::preprocess_query,
     road_angle,
-    search::{Bbox, GeocodeaArea, SearchError},
+    search::{Bbox, GeocodeaArea, GraphError, SearchError},
 };
 
 pub struct GraphResult {
@@ -17,9 +17,23 @@ pub struct GraphResult {
     pub processed_queries: HashMap<String, String>,
 }
 
+impl Default for GraphResult {
+    fn default() -> Self {
+        Self {
+            collection: FeatureCollection {
+                bbox: None,
+                features: vec![],
+                foreign_members: None,
+            },
+            geocode_areas: Default::default(),
+            processed_queries: Default::default(),
+        }
+    }
+}
+
 pub async fn process_graph(graph: Graph, bbox: Bbox) -> Result<GraphResult, SearchError> {
     if detect_cycles(&graph.connections) {
-        return Err(SearchError::CyclicalGraph);
+        Err(GraphError::Cycle)?;
     }
 
     let nodes = BTreeMap::from_iter(graph.nodes.iter().map(|n| (n.id.clone(), n)));
@@ -28,19 +42,19 @@ pub async fn process_graph(graph: Graph, bbox: Bbox) -> Result<GraphResult, Sear
         .nodes
         .iter()
         .find(|n| matches!(n.node, GraphNodeInternal::Map {}))
-        .unwrap()
+        .ok_or(GraphError::MapMissing)?
         .id
         .clone();
 
     let mut geocode_areas = vec![];
     let mut processed_queries = HashMap::new();
 
-    let con = graph
-        .connections
-        .iter()
-        .find(|c| c.target == map_id)
-        .unwrap();
-    let prev = nodes.get(&con.source).unwrap();
+    let Some(con) = graph.connections.iter().find(|c| c.target == map_id) else {
+        return Ok(GraphResult::default());
+    };
+    let prev = nodes
+        .get(&con.source)
+        .ok_or(GraphError::ConnectionNodeMissing)?;
 
     let collection = process_node(
         prev,
@@ -70,8 +84,16 @@ async fn process_node(
 ) -> Result<FeatureCollection, SearchError> {
     match &n.node {
         GraphNodeInternal::RoadAngleFilter { min, max } => {
-            let con = connections.iter().find(|c| c.target == n.id).unwrap();
-            let prev = nodes.get(&con.source).unwrap();
+            let con = connections
+                .iter()
+                .find(|c| c.target == n.id)
+                .ok_or_else(|| GraphError::InputMissing {
+                    node_id: n.id.clone(),
+                })?;
+
+            let prev = nodes
+                .get(&con.source)
+                .ok_or(GraphError::ConnectionNodeMissing)?;
             let collection = process_node(
                 prev,
                 nodes,
@@ -81,7 +103,8 @@ async fn process_node(
                 processed_queries,
             )
             .await?;
-            road_angle::filter(collection, min.value, max.value)
+            let res = road_angle::filter(collection, min.value, max.value)?;
+            Ok(res)
         }
         GraphNodeInternal::Oql { query } => {
             let (query, found_areas) = preprocess_query(&query.value, &bbox, OsmNominatim).await?;
@@ -102,7 +125,12 @@ async fn process_node(
                 Ok(osm_to_geojson(osm))
             } else {
                 let res = res.text().await?;
-                Err(SearchError::Syntax { error: res, query })
+                Err(GraphError::OqlSyntax {
+                    node_id: n.id.clone(),
+                    error: res,
+                    query,
+                }
+                .into())
             }
         }
         // not actually implemented
@@ -110,8 +138,12 @@ async fn process_node(
             let input_con = connections
                 .iter()
                 .find(|c| c.target == n.id && c.target_input == "in")
-                .unwrap();
-            let input_prev = nodes.get(&input_con.source).unwrap();
+                .ok_or_else(|| GraphError::InputMissing {
+                    node_id: n.id.clone(),
+                })?;
+            let input_prev = nodes
+                .get(&input_con.source)
+                .ok_or(GraphError::ConnectionNodeMissing)?;
             let _input_collection = process_node(
                 input_prev,
                 nodes,
@@ -125,8 +157,12 @@ async fn process_node(
             let aux_con = connections
                 .iter()
                 .find(|c| c.target == n.id && c.target_input == "aux")
-                .unwrap();
-            let aux_prev = nodes.get(&aux_con.source).unwrap();
+                .ok_or_else(|| GraphError::InputMissing {
+                    node_id: n.id.clone(),
+                })?;
+            let aux_prev = nodes
+                .get(&aux_con.source)
+                .ok_or(GraphError::ConnectionNodeMissing)?;
             let _aux_collection = process_node(
                 aux_prev,
                 nodes,
@@ -196,16 +232,18 @@ pub enum GraphNodeInternal {
 
 #[derive(Deserialize, Debug)]
 pub struct Control<T> {
-    id: String,
+    #[serde(rename = "id")]
+    _id: String,
     value: T,
 }
 
 #[derive(Deserialize, Debug)]
 pub struct GraphConnection {
-    id: String,
+    #[serde(rename = "id")]
+    _id: String,
     source: String,
     #[serde(rename = "sourceOutput")]
-    source_output: String,
+    _source_output: String,
     target: String,
     #[serde(rename = "targetInput")]
     target_input: String,

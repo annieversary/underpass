@@ -96,6 +96,8 @@ async function run() {
             } else {
                 alert(res.error);
             }
+
+            // TODO do something to highlight node if node_id is set
         }
 
         // TODO make view query work with multiple nodes

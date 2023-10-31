@@ -1,6 +1,7 @@
 import { addTab, codeEditorMap, removeTab } from './codeEditor';
 import { openModal } from './modal';
-import { processedQueries } from './processedQueries';
+import { processedQueries } from './index';
+import { nodeList, oqlNode, roadAngleFilter, map } from './graph-nodes';
 
 import { Control as ControlComponent } from './Control';
 
@@ -38,7 +39,7 @@ const connection = new ConnectionPlugin<Schemes, AreaExtra>();
 connection.addPreset(ConnectionPresets.classic.setup())
 area.use(connection);
 
-const nodeSelector = AreaExtensions.selectableNodes(area, AreaExtensions.selector(), {
+export const nodeSelector = AreaExtensions.selectableNodes(area, AreaExtensions.selector(), {
     accumulating: {
         active: () => false,
     }
@@ -47,10 +48,6 @@ const nodeSelector = AreaExtensions.selectableNodes(area, AreaExtensions.selecto
 AreaExtensions.simpleNodesOrder(area);
 
 // list addable nodes here
-const nodeList = [
-    ["Oql", () => oqlNode(true)],
-    ["Road Angle Filter", roadAngleFilter],
-];
 const contextMenu = new ContextMenuPlugin<Schemes>({
     items(context, plugin) {
         if (context === 'root') {
@@ -158,8 +155,6 @@ export function zoomToNodes() {
 
 
 
-const socket = new ClassicPreset.Socket("socket");
-
 
 // on node selected, select also that tab
 area.addPipe(context => {
@@ -183,53 +178,6 @@ area.addPipe(context => {
 
     return context
 });
-
-function oqlNode(selected: boolean): ClassicPreset.Node {
-    const nodeA = new ClassicPreset.Node("Oql");
-    nodeA.addOutput("out", new ClassicPreset.Output(socket));
-
-    const codeBlockCount = editor.getNodes().filter(n => n.label == "Oql").length + 1;
-
-    const name = `Code block ${codeBlockCount}`;
-    const tab = addTab(nodeA.id, name, selected, () => {
-        nodeSelector.select(nodeA.id, false);
-    }, saveGraph);
-
-    nodeA.addControl("name", new ClassicPreset.InputControl("text", {
-        initial: name,
-        change(value) {
-            tab.innerHTML = `<p>${value}</p>`;
-            saveGraph();
-        }
-    }));
-
-    return nodeA;
-}
-
-function roadAngleFilter(): ClassicPreset.Node {
-    const nodeC = new ClassicPreset.Node("Road Angle Filter");
-    nodeC.addInput("in", new ClassicPreset.Input(socket));
-    nodeC.addOutput("out", new ClassicPreset.Output(socket));
-    nodeC.addControl("min", new ClassicPreset.InputControl("number", {
-        initial: 30.00,
-        change() {
-            saveGraph();
-        }
-    }));
-    nodeC.addControl("max", new ClassicPreset.InputControl("number", {
-        initial: 35.0,
-        change() {
-            saveGraph();
-        }
-    }));
-    return nodeC;
-}
-
-function map(): ClassicPreset.Node {
-    const nodeB = new ClassicPreset.Node("Map");
-    nodeB.addInput("in", new ClassicPreset.Input(socket));
-    return nodeB;
-}
 
 export function serializeGraph() {
     const nodes: any[] = JSON.parse(JSON.stringify(editor.getNodes()));
@@ -266,7 +214,7 @@ const saveEvents = [
 ];
 
 let loading = true;
-function saveGraph() {
+export function saveGraph() {
     if (loading) return;
     const serialized = serializeGraph();
     window.localStorage.setItem('node-graph', JSON.stringify(serialized));
@@ -345,6 +293,8 @@ async function loadGraph() {
             await editor.addConnection(conn);
         }
     }
+
+    setTimeout(zoomToNodes, 10);
 
     loading = false;
 }

@@ -5,7 +5,7 @@ import { bracketMatching } from "@codemirror/language";
 
 import './codeEditor.css';
 
-import { processedQueries } from './processedQueries';
+import { processedQueries } from './index';
 
 const codeContainer = document.querySelector<HTMLDivElement>("#code-container");
 

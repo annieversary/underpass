@@ -8,7 +8,6 @@ import '@maplibre/maplibre-gl-geocoder/dist/maplibre-gl-geocoder.css';
 
 import { map, mapBounds } from './map';
 import { serializeGraph } from './graph';
-import { setProcessedQueries } from './processedQueries';
 
 
 // resize
@@ -34,6 +33,8 @@ resizer.addEventListener("mousedown", () => {
 
 
 
+
+export let processedQueries = {};
 
 
 
@@ -85,7 +86,7 @@ async function run() {
             }
 
             if (res.processed_queries) {
-                setProcessedQueries(res.processed_queries);
+                processedQueries = res.processed_queries;
             }
         } else {
             if (res.format == 'xml') {

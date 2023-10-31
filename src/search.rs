@@ -79,6 +79,8 @@ pub enum GraphError {
     },
     #[error("Road angle: {message}")]
     RoadAngle { message: String, node_id: String },
+    #[error("Road length: {message}")]
+    RoadLength { message: String, node_id: String },
 }
 
 impl IntoResponse for SearchError {

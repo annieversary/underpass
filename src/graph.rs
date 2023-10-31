@@ -7,7 +7,7 @@ use crate::{
     nominatim::OsmNominatim,
     osm_to_geojson::{osm_to_geojson, Osm},
     preprocess::preprocess_query,
-    road_angle,
+    road_angle, road_length,
     search::{Bbox, GeocodeaArea, GraphError, SearchError},
 };
 
@@ -82,6 +82,23 @@ struct NodeProcessor<'a> {
 }
 
 impl<'a> NodeProcessor<'a> {
+    fn find_connection(
+        &self,
+        n: &GraphNode,
+        target: Option<&str>,
+    ) -> Result<&GraphConnection, GraphError> {
+        self.connections
+            .iter()
+            .find(|c| c.target == n.id && target.map(|t| t == c.target_input).unwrap_or(true))
+            .ok_or_else(|| GraphError::InputMissing {
+                node_id: n.id.clone(),
+            })
+    }
+
+    fn get_node<'b>(&'b self, id: &'_ str) -> Result<&'b &'a GraphNode, GraphError> {
+        self.nodes.get(id).ok_or(GraphError::ConnectionNodeMissing)
+    }
+
     #[async_recursion::async_recursion]
     async fn process_node(&mut self, n: &GraphNode) -> Result<FeatureCollection, SearchError> {
         if let Some(res) = self.memory.get(&n.id) {
@@ -89,23 +106,7 @@ impl<'a> NodeProcessor<'a> {
         }
 
         let res: Result<FeatureCollection, SearchError> = match &n.node {
-            GraphNodeInternal::RoadAngleFilter { min, max } => {
-                let con = self
-                    .connections
-                    .iter()
-                    .find(|c| c.target == n.id)
-                    .ok_or_else(|| GraphError::InputMissing {
-                        node_id: n.id.clone(),
-                    })?;
-
-                let prev = self
-                    .nodes
-                    .get(&con.source)
-                    .ok_or(GraphError::ConnectionNodeMissing)?;
-                let collection = self.process_node(prev).await?;
-                let res = road_angle::filter(collection, min.value, max.value, &n.id)?;
-                Ok(res)
-            }
+            GraphNodeInternal::Map {} => unreachable!(),
             GraphNodeInternal::Oql { query } => {
                 let (query, found_areas) =
                     preprocess_query(&query.value, &self.bbox, OsmNominatim).await?;
@@ -134,39 +135,36 @@ impl<'a> NodeProcessor<'a> {
                     .into())
                 }
             }
+            GraphNodeInternal::RoadAngleFilter { min, max } => {
+                let con = self.find_connection(n, None)?;
+                let prev = self.get_node(&con.source)?;
+
+                let collection = self.process_node(prev).await?;
+                let res = road_angle::filter(collection, min.value, max.value, &n.id)?;
+                Ok(res)
+            }
+            GraphNodeInternal::RoadLengthFilter { min, max } => {
+                let con = self.find_connection(n, None)?;
+                let prev = self.get_node(&con.source)?;
+
+                let collection = self.process_node(prev).await?;
+                let res = road_length::filter(collection, min.value, max.value, &n.id)?;
+                Ok(res)
+            }
             // not actually implemented
             GraphNodeInternal::InViewOf {} => {
-                let input_con = self
-                    .connections
-                    .iter()
-                    .find(|c| c.target == n.id && c.target_input == "in")
-                    .ok_or_else(|| GraphError::InputMissing {
-                        node_id: n.id.clone(),
-                    })?;
-                let input_prev = self
-                    .nodes
-                    .get(&input_con.source)
-                    .ok_or(GraphError::ConnectionNodeMissing)?;
+                let input_con = self.find_connection(n, Some("in"))?;
+                let input_prev = self.get_node(&input_con.source)?;
                 let _input_collection = self.process_node(input_prev).await?;
 
-                let aux_con = self
-                    .connections
-                    .iter()
-                    .find(|c| c.target == n.id && c.target_input == "aux")
-                    .ok_or_else(|| GraphError::InputMissing {
-                        node_id: n.id.clone(),
-                    })?;
-                let aux_prev = self
-                    .nodes
-                    .get(&aux_con.source)
-                    .ok_or(GraphError::ConnectionNodeMissing)?;
+                let aux_con = self.find_connection(n, Some("aux"))?;
+                let aux_prev = self.get_node(&aux_con.source)?;
                 let _aux_collection = self.process_node(aux_prev).await?;
 
                 // TODO filter input_collection by whether it can see the aux_collection
 
                 todo!()
             }
-            GraphNodeInternal::Map {} => unreachable!(),
         };
 
         let res = res?;
@@ -215,6 +213,11 @@ pub struct GraphNode {
 pub enum GraphNodeInternal {
     #[serde(rename = "Road Angle Filter")]
     RoadAngleFilter {
+        min: Control<f64>,
+        max: Control<f64>,
+    },
+    #[serde(rename = "Road Length Filter")]
+    RoadLengthFilter {
         min: Control<f64>,
         max: Control<f64>,
     },

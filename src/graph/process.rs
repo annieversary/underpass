@@ -1,35 +1,17 @@
 use std::collections::{BTreeMap, HashMap};
 
 use geojson::FeatureCollection;
-use serde::Deserialize;
 
 use crate::{
+    graph::{
+        nodes, utils::detect_cycles, Graph, GraphConnection, GraphError, GraphNode,
+        GraphNodeInternal, GraphResult,
+    },
     nominatim::OsmNominatim,
     osm_to_geojson::{osm_to_geojson, Osm},
     preprocess::preprocess_query,
-    road_angle, road_length,
-    search::{Bbox, GeocodeaArea, GraphError, SearchError},
+    search::{Bbox, GeocodeaArea, SearchError},
 };
-
-pub struct GraphResult {
-    pub collection: FeatureCollection,
-    pub geocode_areas: Vec<GeocodeaArea>,
-    pub processed_queries: HashMap<String, String>,
-}
-
-impl Default for GraphResult {
-    fn default() -> Self {
-        Self {
-            collection: FeatureCollection {
-                bbox: None,
-                features: vec![],
-                foreign_members: None,
-            },
-            geocode_areas: Default::default(),
-            processed_queries: Default::default(),
-        }
-    }
-}
 
 pub async fn process_graph(graph: Graph, bbox: Bbox) -> Result<GraphResult, SearchError> {
     if detect_cycles(&graph.connections) {
@@ -140,7 +122,8 @@ impl<'a> NodeProcessor<'a> {
                 let prev = self.get_node(&con.source)?;
 
                 let collection = self.process_node(prev).await?;
-                let res = road_angle::filter(collection, min.value, max.value, &n.id)?;
+                let res =
+                    nodes::road_angle_filter::filter(collection, min.value, max.value, &n.id)?;
                 Ok(res)
             }
             GraphNodeInternal::RoadLengthFilter { min, max } => {
@@ -148,7 +131,8 @@ impl<'a> NodeProcessor<'a> {
                 let prev = self.get_node(&con.source)?;
 
                 let collection = self.process_node(prev).await?;
-                let res = road_length::filter(collection, min.value, max.value, &n.id)?;
+                let res =
+                    nodes::road_length_filter::filter(collection, min.value, max.value, &n.id)?;
                 Ok(res)
             }
             // not actually implemented
@@ -173,77 +157,4 @@ impl<'a> NodeProcessor<'a> {
 
         Ok(res)
     }
-}
-
-fn detect_cycles(connections: &[GraphConnection]) -> bool {
-    use petgraph::{
-        prelude::*,
-        visit::{depth_first_search, DfsEvent},
-    };
-
-    let g = GraphMap::<&str, (), Directed>::from_edges(
-        connections
-            .iter()
-            .map(|c| (c.source.as_str(), c.target.as_str())),
-    );
-
-    let g = g.into_graph::<usize>();
-    depth_first_search(&g, g.node_indices(), |event| match event {
-        DfsEvent::BackEdge(_, _) => Err(()),
-        _ => Ok(()),
-    })
-    .is_err()
-}
-
-#[derive(Deserialize, Debug)]
-pub struct Graph {
-    nodes: Vec<GraphNode>,
-    connections: Vec<GraphConnection>,
-}
-#[derive(Deserialize, Debug)]
-pub struct GraphNode {
-    id: String,
-    #[serde(flatten)]
-    node: GraphNodeInternal,
-}
-
-// we dont need the inputs/outputs in here cause we can assume they're gonna be the same
-#[derive(Deserialize, Debug)]
-#[serde(tag = "label", content = "controls")]
-pub enum GraphNodeInternal {
-    #[serde(rename = "Road Angle Filter")]
-    RoadAngleFilter {
-        min: Control<f64>,
-        max: Control<f64>,
-    },
-    #[serde(rename = "Road Length Filter")]
-    RoadLengthFilter {
-        min: Control<f64>,
-        max: Control<f64>,
-    },
-    Oql {
-        // this eventually will have the code for this node
-        query: Control<String>,
-    },
-    Map {},
-    InViewOf {},
-}
-
-#[derive(Deserialize, Debug)]
-pub struct Control<T> {
-    #[serde(rename = "id")]
-    _id: String,
-    value: T,
-}
-
-#[derive(Deserialize, Debug)]
-pub struct GraphConnection {
-    #[serde(rename = "id")]
-    _id: String,
-    source: String,
-    #[serde(rename = "sourceOutput")]
-    _source_output: String,
-    target: String,
-    #[serde(rename = "targetInput")]
-    target_input: String,
 }

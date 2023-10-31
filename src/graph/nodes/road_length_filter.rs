@@ -1,4 +1,4 @@
-use crate::search::GraphError;
+use crate::graph::GraphError;
 use geo::{GeodesicLength, LineString, Point};
 use geojson::{Feature, FeatureCollection, Value};
 

@@ -11,8 +11,6 @@ mod graph;
 mod nominatim;
 mod osm_to_geojson;
 mod preprocess;
-mod road_angle;
-mod road_length;
 mod search;
 
 #[tokio::main]

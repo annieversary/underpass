@@ -1,4 +1,8 @@
 import { addTab, codeEditorMap, removeTab } from './codeEditor';
+import { openModal } from './modal';
+import { processedQueries } from './processedQueries';
+
+import { Control as ControlComponent } from './Control';
 
 import './graph.css';
 
@@ -9,8 +13,6 @@ import { ReactPlugin, Presets, ReactArea2D } from "rete-react-plugin";
 import { ConnectionPlugin, Presets as ConnectionPresets } from "rete-connection-plugin"
 import { Control } from 'rete/_types/presets/classic';
 import { ContextMenuPlugin } from "rete-context-menu-plugin";
-
-import { Control as ControlComponent } from './Control';
 
 const container = document.querySelector<HTMLDivElement>('#graph-container');
 
@@ -26,10 +28,7 @@ export const area = new AreaPlugin<Schemes, AreaExtra>(container);
 const render = new ReactPlugin<Schemes, AreaExtra>({ createRoot });
 render.addPreset(Presets.classic.setup({
     customize: {
-        control: (p) => {
-            console.log(p);
-            return ControlComponent;
-        }
+        control: (p) => ControlComponent
     }
 }));
 editor.use(area);
@@ -102,25 +101,40 @@ const contextMenu = new ContextMenuPlugin<Schemes>({
                 };
             }
 
+            const list = [
+                {
+                    label: 'Delete',
+                    key: 'delete',
+                    async handler() {
+                        const nodeId = context.id
+                        const connections = editor.getConnections().filter(c => {
+                            return c.source === nodeId || c.target === nodeId
+                        })
+
+                        for (const connection of connections) {
+                            await editor.removeConnection(connection.id)
+                        }
+                        await editor.removeNode(nodeId)
+                    }
+                },
+            ];
+
+            const nodeId = context.id;
+            const query = processedQueries[nodeId];
+            if (context.label == 'Oql' && query) {
+                list.push({
+                    label: 'View query',
+                    key: 'view-query',
+                    async handler() {
+
+                        openModal(`<pre>${query}</pre>`);
+                    },
+                });
+            }
+
             return {
                 searchBar: false,
-                list: [
-                    {
-                        label: 'Delete',
-                        key: 'delete',
-                        async handler() {
-                            const nodeId = context.id
-                            const connections = editor.getConnections().filter(c => {
-                                return c.source === nodeId || c.target === nodeId
-                            })
-
-                            for (const connection of connections) {
-                                await editor.removeConnection(connection.id)
-                            }
-                            await editor.removeNode(nodeId)
-                        }
-                    }
-                ]
+                list,
             }
         }
 

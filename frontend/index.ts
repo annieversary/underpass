@@ -8,6 +8,8 @@ import '@maplibre/maplibre-gl-geocoder/dist/maplibre-gl-geocoder.css';
 
 import { map, mapBounds } from './map';
 import { serializeGraph } from './graph';
+import { setProcessedQueries } from './processedQueries';
+
 
 // resize
 const resizer = document.querySelector("#resizer");
@@ -80,6 +82,10 @@ async function run() {
             if (res.geocode_areas.length > 0) {
                 const areas = res.geocode_areas.map((a: any) => `${a.original} - <a href="//www.openstreetmap.org/${a.ty}/${a.id}" target="_blank" class="osm-link">${a.name}</a><br/>`).join('');
                 resultsDiv.innerHTML = `<h2>Geocode areas found:</h2>${areas}`;
+            }
+
+            if (res.processed_queries) {
+                setProcessedQueries(res.processed_queries);
             }
         } else {
             if (res.format == 'xml') {
@@ -303,31 +309,6 @@ map.getCanvas().addEventListener(
 );
 
 
-
-// throwaway modals
-// content: string
-function openModal(content: string) {
-    const modal = document.createElement('div');
-    modal.classList.add('modal');
-    modal.innerHTML = `
-    <div class="modal-content">
-        <span class="close">&times;</span>
-        <div class="modal-inner">
-            ${content}
-        </div>
-    </div>`;
-    document.body.appendChild(modal);
-    modal.querySelector<HTMLSpanElement>('span.close').onclick = function() {
-        modal.remove();
-    };
-    window.onclick = function(event: MouseEvent) {
-        if (event.target == modal) {
-            modal.remove();
-        }
-    };
-
-    // TODO pressing esc should close the modal
-}
 
 
 

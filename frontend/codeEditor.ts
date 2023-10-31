@@ -5,9 +5,11 @@ import { bracketMatching } from "@codemirror/language";
 
 import './codeEditor.css';
 
+import { processedQueries } from './processedQueries';
+
 const codeContainer = document.querySelector<HTMLDivElement>("#code-container");
 
-function newEditor(parent: HTMLDivElement, query: string, saveGraph: () => void): EditorView {
+function newEditor(parent: HTMLDivElement, query: string, saveGraph: () => void, id: string): EditorView {
     let editor = new EditorView({
         extensions: [
             history(),
@@ -20,6 +22,7 @@ function newEditor(parent: HTMLDivElement, query: string, saveGraph: () => void)
             ViewPlugin.fromClass(class {
                 update(_update: ViewUpdate) {
                     saveGraph();
+                    delete processedQueries[id];
                 }
             }),
         ],
@@ -50,7 +53,7 @@ export function addTab(
     editor.classList.add('code-editor')
     editor.dataset.nodeId = id;
     editor.dataset.selected = selected ? 'yes' : 'no';
-    codeEditorMap[id] = newEditor(editor, query, saveGraph);
+    codeEditorMap[id] = newEditor(editor, query, saveGraph, id);
     codeContainer.appendChild(editor);
 
     // create the tab

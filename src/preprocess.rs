@@ -17,7 +17,7 @@ pub async fn preprocess_query(
 
     let mut new = String::with_capacity(query.len());
     let mut last_match = 0;
-    for caps in re.captures_iter(&query) {
+    for caps in re.captures_iter(query) {
         let m = caps.get(0).unwrap();
         new.push_str(&query[last_match..m.start()]);
 

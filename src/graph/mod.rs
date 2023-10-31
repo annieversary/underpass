@@ -61,6 +61,7 @@ pub enum GraphNodeInternal {
     RoadLengthFilter {
         min: Control<f64>,
         max: Control<f64>,
+        tolerance: Control<f64>,
     },
     InViewOf {},
 }

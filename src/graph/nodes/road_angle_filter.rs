@@ -31,6 +31,10 @@ pub fn filter(
 
     let features = ways
         .flat_map(|(way, coords)| {
+            if coords.len() < 2 {
+                return vec![];
+            }
+
             let coords = coords
                 .iter()
                 .map(|vec| Point::new(vec[0], vec[1]))
@@ -70,6 +74,8 @@ pub fn filter(
 
 fn get_bearing(p1: Point, p2: Point) -> f64 {
     let mut bearing = p1.geodesic_bearing(p2);
+
+    // we want bearing only between -90 and +90
     if bearing < -90.0 {
         bearing += 180.0;
     } else if bearing > 90.0 {

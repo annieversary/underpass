@@ -126,13 +126,22 @@ impl<'a> NodeProcessor<'a> {
                     nodes::road_angle_filter::filter(collection, min.value, max.value, &n.id)?;
                 Ok(res)
             }
-            GraphNodeInternal::RoadLengthFilter { min, max } => {
+            GraphNodeInternal::RoadLengthFilter {
+                min,
+                max,
+                tolerance,
+            } => {
                 let con = self.find_connection(n, None)?;
                 let prev = self.get_node(&con.source)?;
 
                 let collection = self.process_node(prev).await?;
-                let res =
-                    nodes::road_length_filter::filter(collection, min.value, max.value, &n.id)?;
+                let res = nodes::road_length_filter::filter(
+                    collection,
+                    min.value,
+                    max.value,
+                    tolerance.value,
+                    &n.id,
+                )?;
                 Ok(res)
             }
             // not actually implemented

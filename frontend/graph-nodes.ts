@@ -70,6 +70,12 @@ export function roadLengthFilter(): ClassicPreset.Node {
             saveGraph();
         }
     }));
+    nodeC.addControl("tolerance", new ClassicPreset.InputControl("number", {
+        initial: 10.0,
+        change() {
+            saveGraph();
+        }
+    }));
     return nodeC;
 }
 

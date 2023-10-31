@@ -1,3 +1,5 @@
+use geojson::feature::Id;
+
 use super::GraphConnection;
 
 pub fn detect_cycles(connections: &[GraphConnection]) -> bool {
@@ -18,4 +20,13 @@ pub fn detect_cycles(connections: &[GraphConnection]) -> bool {
         _ => Ok(()),
     })
     .is_err()
+}
+
+pub const RLF_NUMBER: u64 = 1000000000000000;
+pub const RAF_NUMBER: u64 = 2000000000000000;
+pub fn new_id(id: Id, number: u64) -> Option<Id> {
+    match id {
+        Id::Number(n) if n.is_u64() => Some(Id::Number((n.as_u64().unwrap() + number).into())),
+        _ => None,
+    }
 }

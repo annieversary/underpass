@@ -36,8 +36,11 @@ fn element_to_feature(el: &Element, node_map: &BTreeMap<u64, Vec<f64>>) -> Featu
     // > an heuristic has to be applied to determine whether a way is a Line or a Polygon
     // https://wiki.openstreetmap.org/wiki/Overpass_turbo/Polygon_Features
 
-    if let Some(serde_json::Value::Object(obj)) = el.tags() {
-        feat.properties = Some(obj.clone());
+    if let Some(serde_json::Value::Object(mut obj)) = el.tags().cloned() {
+        obj.insert("osm_id".to_string(), el.id().into());
+        obj.insert("osm_type".to_string(), el.osm_type().to_string().into());
+
+        feat.properties = Some(obj);
     }
 
     feat
@@ -128,6 +131,14 @@ impl Element {
             Element::Node(n) => n.id,
             Element::Way(n) => n.id,
             Element::Relation(n) => n.id,
+        }
+    }
+
+    fn osm_type(&self) -> &'static str {
+        match self {
+            Element::Node(_) => "node",
+            Element::Way(_) => "way",
+            Element::Relation(_) => "relation",
         }
     }
 }

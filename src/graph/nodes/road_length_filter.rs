@@ -1,4 +1,7 @@
-use crate::graph::GraphError;
+use crate::graph::{
+    utils::{new_id, RLF_NUMBER},
+    GraphError,
+};
 use geo::{GeodesicLength, LineString, Point};
 use geojson::{Feature, FeatureCollection, Value};
 
@@ -29,13 +32,13 @@ pub fn filter(
             .features
             .iter()
             .filter_map(|w| match w.geometry.as_ref().map(|g| &g.value) {
-                Some(Value::LineString(w)) => Some(w),
+                Some(Value::LineString(coords)) => Some((w, coords)),
                 _ => None,
             });
 
     let features = ways
-        .flat_map(|way| {
-            let coords = way
+        .flat_map(|(way, coords)| {
+            let coords = coords
                 .iter()
                 .map(|vec| Point::new(vec[0], vec[1]))
                 .collect::<Vec<_>>();
@@ -47,7 +50,7 @@ pub fn filter(
 
                     if min < distance && distance < max {
                         Some(Feature {
-                            // TODO copy properties over and also add a `osm_id` one?
+                            id: way.id.clone().and_then(|id| new_id(id, RLF_NUMBER)),
                             geometry: Some(
                                 Value::LineString(vec![
                                     vec![pair[0].x(), pair[0].y()],
@@ -55,6 +58,7 @@ pub fn filter(
                                 ])
                                 .into(),
                             ),
+                            properties: way.properties.clone(),
                             ..Default::default()
                         })
                     } else {

@@ -69,10 +69,10 @@ map.on("style.load", () => {
                 .map(([k, v]) => `${k} = ${v}`)
                 .join('<br>');
 
-            // this is not accurate but good enough
-            const type = f.layer.type == 'fill' ? 'relation' : (f.layer.type == 'line' ? 'way' : 'node');
+            const osm_id = f.properties.osm_id;
+            const osm_type = f.properties.osm_type
 
-            const html = `<a href="//www.openstreetmap.org/${type}/${f.id}" target="_blank" class="osm-link">${f.id}</a><br/><br/>
+            const html = `<a href="//www.openstreetmap.org/${osm_type}/${osm_id}" target="_blank" class="osm-link">${osm_id}</a><br/><br/>
             ${props}<br/><br/>
             <a href="https://google.co.uk/maps?q=${e.lngLat.lat},${e.lngLat.lng}" target="_blank" class="map-link"
                 onclick="map.setFeatureState({source: 'OverpassAPI', id: ${f.id}}, {visited: true}); "
@@ -84,10 +84,10 @@ map.on("style.load", () => {
                 .setLngLat(e.lngLat)
                 .setHTML(html)
                 .addTo(map)
-                .on('close', () => map.setFeatureState(
+                .on('close', () => f.id ? map.setFeatureState(
                     { source: 'OverpassAPI', id: f.id },
                     { selected: false }
-                ));
+                ) : null);
 
             // highlight the current thing
             map.setFeatureState(

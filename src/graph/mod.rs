@@ -42,10 +42,16 @@ pub struct GraphNode {
     node: GraphNodeInternal,
 }
 
-// we dont need the inputs/outputs in here cause we can assume they're gonna be the same
+// we dont need the inputs/outputs in here since they dont contain any data
+// we know what inputs and outputs each node has
 #[derive(Deserialize, Debug)]
 #[serde(tag = "label", content = "controls")]
 pub enum GraphNodeInternal {
+    Map {},
+    Oql {
+        // this eventually will have the code for this node
+        query: Control<String>,
+    },
     #[serde(rename = "Road Angle Filter")]
     RoadAngleFilter {
         min: Control<f64>,
@@ -56,11 +62,6 @@ pub enum GraphNodeInternal {
         min: Control<f64>,
         max: Control<f64>,
     },
-    Oql {
-        // this eventually will have the code for this node
-        query: Control<String>,
-    },
-    Map {},
     InViewOf {},
 }
 

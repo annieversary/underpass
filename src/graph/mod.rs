@@ -49,8 +49,8 @@ pub struct GraphNode {
 pub enum GraphNodeInternal {
     Map {},
     Oql {
-        // this eventually will have the code for this node
         query: Control<String>,
+        timeout: Control<u32>,
     },
     #[serde(rename = "Road Angle Filter")]
     RoadAngleFilter {

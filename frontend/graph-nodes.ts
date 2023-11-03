@@ -31,6 +31,12 @@ export function oqlNode(selected: boolean): ClassicPreset.Node {
             saveGraph();
         }
     }));
+    nodeA.addControl("timeout", new ClassicPreset.InputControl("number", {
+        initial: 30,
+        change() {
+            saveGraph();
+        }
+    }));
 
     return nodeA;
 }

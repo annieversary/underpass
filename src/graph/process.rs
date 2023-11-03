@@ -89,9 +89,9 @@ impl<'a> NodeProcessor<'a> {
 
         let res: Result<FeatureCollection, SearchError> = match &n.node {
             GraphNodeInternal::Map {} => unreachable!(),
-            GraphNodeInternal::Oql { query } => {
+            GraphNodeInternal::Oql { query, timeout } => {
                 let (query, found_areas) =
-                    preprocess_query(&query.value, &self.bbox, 60, OsmNominatim).await?;
+                    preprocess_query(&query.value, &self.bbox, timeout.value, OsmNominatim).await?;
 
                 let client = reqwest::Client::new();
                 let res = client

@@ -1,5 +1,6 @@
 #[cfg(debug_assertions)]
 use std::fs::read_to_string;
+use std::path::Path;
 
 use axum::{
     response::Html,
@@ -12,6 +13,7 @@ mod nominatim;
 mod osm_to_geojson;
 mod preprocess;
 mod search;
+mod taginfo;
 
 #[tokio::main]
 async fn main() {
@@ -20,11 +22,22 @@ async fn main() {
         panic!("{:?}", err);
     }
 
+    if !Path::new("./public/taginfo.json").exists() {
+        if let Err(err) = taginfo::update_taginfo().await {
+            panic!("{:?}", err);
+        }
+    }
+
     // build our application with a single route
     let app = Router::new()
         .route("/", get(home))
         .route("/index.css", get(css))
         .route("/index.js", get(js))
+        .route(
+            "/taginfo.json",
+            get(|| async { read_to_string("./public/taginfo.json").unwrap() }),
+        )
+        .route("/update-taginfo", get(taginfo::update_taginfo))
         .route("/search", post(search::search));
 
     let port: u16 = std::env::var("PORT")

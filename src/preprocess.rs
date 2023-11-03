@@ -9,6 +9,7 @@ use crate::{
 pub async fn preprocess_query(
     query: &str,
     bbox: &Bbox,
+    timeout: u32,
     nominatim: impl Nominatim,
 ) -> Result<(String, Vec<GeocodeaArea>), SearchError> {
     let mut geocode_areas = vec![];
@@ -16,16 +17,22 @@ pub async fn preprocess_query(
     let re = Regex::new(r"\{\{\s*([\w.]+)(:([\S\s]+?))?\}\}").unwrap();
 
     let mut new = String::with_capacity(query.len());
+    new.push_str(&format!("[out:json][timeout:{timeout}];\n\n"));
     let mut last_match = 0;
     for caps in re.captures_iter(query) {
         let m = caps.get(0).unwrap();
         new.push_str(&query[last_match..m.start()]);
 
         let replacement = match &caps[1] {
-            "out" => "out;>;out skel qt;".to_string(),
+            // "out" => "out;>;out skel qt;".to_string(),
             "bbox" => format!(
                 "{},{},{},{}",
                 bbox.sw[0], bbox.sw[1], bbox.ne[0], bbox.ne[1]
+            ),
+            "center" => format!(
+                "{},{}",
+                (bbox.sw[0] + bbox.ne[0]) / 2.0,
+                (bbox.sw[1] + bbox.ne[1]) / 2.0
             ),
             "geocodeArea" => {
                 let mut r = "(".to_string();
@@ -72,6 +79,8 @@ pub async fn preprocess_query(
         last_match = m.end();
     }
     new.push_str(&query[last_match..]);
+
+    new.push_str("\n\nout;>;out skel qt;");
 
     Ok((new, geocode_areas))
 }

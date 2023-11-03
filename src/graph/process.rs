@@ -91,7 +91,7 @@ impl<'a> NodeProcessor<'a> {
             GraphNodeInternal::Map {} => unreachable!(),
             GraphNodeInternal::Oql { query } => {
                 let (query, found_areas) =
-                    preprocess_query(&query.value, &self.bbox, OsmNominatim).await?;
+                    preprocess_query(&query.value, &self.bbox, 60, OsmNominatim).await?;
 
                 let client = reqwest::Client::new();
                 let res = client

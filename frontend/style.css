@@ -139,7 +139,7 @@ body {
 
 .modal {
     position: fixed; /* Stay in place */
-    z-index: 100; /* Sit on top */
+    z-index: 10000000000; /* Sit on top */
     left: 0;
     top: 0;
     width: 100%; /* Full width */
@@ -155,6 +155,7 @@ body {
     padding: 20px;
     border: 1px solid #888;
     width: 80%; /* Could be more or less, depending on screen size */
+    overflow: auto;
 }
 
 .close {

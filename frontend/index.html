@@ -60,10 +60,16 @@
                 <div class="modal-inner">
                     <h2>Settings</h2>
 
-                    <label title="Ways are made out of nodes which have no tags. Enabling this will hide those points, since they usually serve no purpose">
-                        Hide nodes without tags from map
-                        <input id="settings-hide-empty-nodes" type="checkbox" />
-                    </label>
+                    <div class="settings">
+                        <label title="Ways are made out of nodes which have no tags. Enabling this will hide those points, since they usually serve no purpose">
+                            Hide nodes without tags from map
+                            <input id="settings-hide-empty-nodes" type="checkbox" />
+                        </label>
+                        <label title="Autocompleted and generated tags (and keys and values) will use quotes">
+                            Prefer quotes around tags
+                            <input id="settings-tags-should-have-quotes" type="checkbox" />
+                        </label>
+                    </div>
 
                     <h2>Attribution</h2>
 

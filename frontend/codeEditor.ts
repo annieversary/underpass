@@ -6,6 +6,7 @@ import { bracketMatching } from "@codemirror/language";
 import './codeEditor.css';
 
 import { processedQueries } from './index';
+import { settings } from './settings';
 
 export function addTab(
     id: string,
@@ -13,7 +14,7 @@ export function addTab(
     selected: boolean,
     onclick: () => void,
     saveGraph: () => void,
-    query: string = 'way[highway]({{bbox}});',
+    query: string = settings.tagsShouldHaveQuotes() ? 'way["highway"]({{bbox}});' : 'way[highway]({{bbox}});',
 ): HTMLDivElement {
     // create code editor
     const editor = document.createElement('div');

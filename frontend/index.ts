@@ -169,12 +169,15 @@ function download(filename: string, json: any) {
 
 // corner tooltip with coordinates
 const infoDiv = document.getElementById('info');
-map.on('mousemove', (e) => {
+
+function updateInfo(e) {
     infoDiv.innerHTML = `${e.lngLat.wrap().lat.toFixed(8)},${e.lngLat.wrap().lng.toFixed(8)}`;
     if (distance) {
-        infoDiv.innerHTML += `, Distance: ${distance}m`;
+        infoDiv.innerHTML += `, distance: ${distance}m`;
     }
-});
+}
+map.on('mousemove', updateInfo);
+map.on('mouseup', updateInfo);
 
 let distance = null;
 let distanceMeasureGeojson = {

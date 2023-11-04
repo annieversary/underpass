@@ -42,6 +42,10 @@ body {
     height: calc(100vh - var(--header-height));
 }
 
+#name {
+    padding-right: 0.32em; /* i am an awful person */
+}
+
 #resizer {
     width: 3px;
     background: white;
@@ -123,7 +127,7 @@ body {
     top: var(--header-height);
 }
 #distance-button {
-    background: grey;
+    background: #bebcbc;
 }
 #distance-button[data-on="true"] {
     background: #a8e6a8;

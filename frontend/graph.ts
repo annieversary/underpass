@@ -118,7 +118,7 @@ const contextMenu = new ContextMenuPlugin<Schemes>({
 
             const nodeId = context.id;
             const query = processedQueries[nodeId];
-            if (context.label == 'Oql' && query) {
+            if (context.label == 'Overpass QL' && query) {
                 list.push({
                     label: 'View query',
                     key: 'view-query',
@@ -167,7 +167,7 @@ area.addPipe(context => {
 
     // delete tab and code editor when deleting oql nodes
     if (context.type == 'noderemoved') {
-        if (context.data.label == "Oql") {
+        if (context.data.label == "Overpass QL") {
             removeTab(context.data.id);
         }
     }
@@ -187,7 +187,7 @@ export function serializeGraph() {
         nodes[i].position = area.nodeViews.get(nodes[i].id).position;
 
         // add query as a control if this is an oql node
-        if (nodes[i].label == "Oql") {
+        if (nodes[i].label == "Overpass QL") {
             nodes[i].controls.query = {
                 id: getUID(),
                 value: codeEditorMap[nodes[i].id].state.doc.toString(),
@@ -229,7 +229,7 @@ async function loadGraph() {
         const data = JSON.parse(nodeGraph);
 
         const selectedNode = data.nodes.find(n => n.selected);
-        const selectedIsOql = selectedNode?.label === 'Oql';
+        const selectedIsOql = selectedNode?.label === 'Overpass QL';
 
         for (const { id, label, inputs, outputs, controls, position, selected } of data.nodes) {
             const node = new ClassicPreset.Node(label);
@@ -251,7 +251,7 @@ async function loadGraph() {
                 node.addOutput(key, out);
             });
 
-            if (label == "Oql") {
+            if (label == "Overpass QL") {
                 const name = controls.name.value;
                 const query = controls.query.value;
                 const tab = addTab(node.id, name, selected || !selectedIsOql, () => {
@@ -302,20 +302,17 @@ loadGraph();
 
 async function createDefaultGraph() {
     const nodeA = oqlNode(true);
-    const nodeOther = oqlNode(false);
-    const nodeC = roadAngleFilter();
-    const nodeB = map();
+    const nodeB = roadAngleFilter();
+    const nodeC = map();
 
     await editor.addNode(nodeA);
-    await editor.addNode(nodeOther);
     await editor.addNode(nodeB);
     await editor.addNode(nodeC);
 
-    await editor.addConnection(new ClassicPreset.Connection(nodeA, "out", nodeC, "in"));
-    await editor.addConnection(new ClassicPreset.Connection(nodeC, "out", nodeB, "in"));
+    await editor.addConnection(new ClassicPreset.Connection(nodeA, "out", nodeB, "in"));
+    await editor.addConnection(new ClassicPreset.Connection(nodeB, "out", nodeC, "in"));
 
-    await area.translate(nodeOther.id, { x: 50, y: 300 });
     await area.translate(nodeA.id, { x: 50, y: 100 });
-    await area.translate(nodeC.id, { x: 280, y: 100 });
-    await area.translate(nodeB.id, { x: 500, y: 100 });
+    await area.translate(nodeB.id, { x: 280, y: 100 });
+    await area.translate(nodeC.id, { x: 500, y: 100 });
 }

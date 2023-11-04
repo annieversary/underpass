@@ -5,7 +5,7 @@ import { nodeSelector, editor, saveGraph } from './graph';
 
 
 export const nodeList = [
-    ["Oql", () => oqlNode(true)],
+    ["Overpass QL", () => oqlNode(true)],
     ["Road Angle Filter", roadAngleFilter],
     ["Road Length Filter", roadLengthFilter],
 ];
@@ -14,12 +14,12 @@ export const nodeList = [
 const socket = new ClassicPreset.Socket("socket");
 
 export function oqlNode(selected: boolean): ClassicPreset.Node {
-    const nodeA = new ClassicPreset.Node("Oql");
+    const nodeA = new ClassicPreset.Node("Overpass QL");
     nodeA.addOutput("out", new ClassicPreset.Output(socket));
 
-    const codeBlockCount = editor.getNodes().filter(n => n.label == "Oql").length + 1;
+    const codeBlockCount = editor.getNodes().filter(n => n.label == "Overpass QL").length + 1;
 
-    const name = `Code block ${codeBlockCount}`;
+    const name = `OQL Block ${codeBlockCount}`;
     const tab = addTab(nodeA.id, name, selected, () => {
         nodeSelector.select(nodeA.id, false);
     }, saveGraph);

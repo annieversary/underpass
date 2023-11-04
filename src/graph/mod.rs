@@ -48,6 +48,7 @@ pub struct GraphNode {
 #[serde(tag = "label", content = "controls")]
 pub enum GraphNodeInternal {
     Map {},
+    #[serde(rename = "Overpass QL")]
     Oql {
         query: Control<String>,
         timeout: Control<u32>,

@@ -1,3 +1,7 @@
+import { dispatchToAllEditors } from './codeEditor/index';
+import { vim } from "@replit/codemirror-vim"
+
+import { Compartment } from "@codemirror/state";
 import './settings.css';
 
 // settings
@@ -17,17 +21,82 @@ settingsButton.onclick = function() {
     };
 };
 
-export const settings = {
-    hideEmptyNodes: () => document.querySelector<HTMLInputElement>('#settings-hide-empty-nodes').checked,
-    tagsShouldHaveQuotes: () => document.querySelector<HTMLInputElement>('#settings-tags-should-have-quotes').checked,
+const settingsFields = {
+    hideEmptyNodes: {
+        elementId: '#settings-hide-empty-nodes',
+        type: 'checkbox',
+    },
+    tagsShouldHaveQuotes: {
+        elementId: '#settings-tags-should-have-quotes',
+        type: 'checkbox',
+    },
+    vim: {
+        elementId: '#settings-vim',
+        type: 'checkbox',
+        onChange: (v) => dispatchToAllEditors({ effects: vimCompartment.reconfigure(v ? vim() : []) })
+    },
 };
 
-function onChangeCheckbox(selector: string, localStorageId: string) {
-    const f = document.querySelector<HTMLInputElement>(selector);
-    f.checked = window.localStorage.getItem(localStorageId) === 'true';
-    f.onchange = function() {
-        window.localStorage.setItem(localStorageId, f.checked.toString());
-    };
+type SettingsOption = keyof typeof settingsFields;
+export let settings: { [key in SettingsOption]: () => boolean } = {} as any;
+for (const key of Object.keys(settingsFields)) {
+    const field = settingsFields[key];
+    const f = document.querySelector<HTMLInputElement>(field.elementId);
+
+    switch (field.type) {
+        case 'checkbox':
+            settings[key] = () => document.querySelector<HTMLInputElement>(field.elementId).checked;
+
+            f.checked = window.localStorage.getItem(`settings.${key}`) === 'true';
+            f.onchange = function() {
+                window.localStorage.setItem(`settings.${key}`, f.checked.toString());
+                if (field.onChange) field.onChange(f.checked);
+            };
+            break;
+    }
 }
-onChangeCheckbox('#settings-hide-empty-nodes', 'settings.hideEmptyNodes');
-onChangeCheckbox('#settings-tags-should-have-quotes', 'settings.tagsShouldHaveQuotes');
+
+
+export const vimCompartment = new Compartment;
+
+// class CompartmentController {
+//     compartments = {};
+//     controllers = {};
+
+//     register(key, controller) {
+//         this.compartments[key] = new Compartment();
+//         this.controllers[key] = controller;
+//     }
+
+//     get extension() {
+//         return Object.values(this.compartments).map(
+//             (compartment) => compartment.of([])
+//         );
+//     }
+
+//     async update(settings) {
+//         Object.entries(settings).map(async ([key, value]) => {
+//             if (value !== undefined && this.controllers[key]) {
+//                 const newValue = await this.controllers[key](value, settings);
+
+//                 if (newValue !== null) {
+//                     for (const editor of Object.values(codeEditorMap)) {
+//                         editor.dispatch({
+//                             effects: this.compartments[key].reconfigure(newValue || [])
+//                         });
+//                     }
+//                 }
+//             }
+//         });
+//     }
+// }
+
+// export const settingsController = new CompartmentController();
+// settingsController.register(
+//     'vim',
+//     function(v) {
+//         console.log(v);
+//         return v ? vim() : [];
+//     }
+// );
+// settingsController.update({ vim: true });

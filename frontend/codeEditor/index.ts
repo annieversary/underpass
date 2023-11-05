@@ -3,12 +3,14 @@ import { tags } from "@lezer/highlight";
 import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { acceptCompletion } from "@codemirror/autocomplete";
 import { indentWithTab } from "@codemirror/commands";
+import { Transaction } from "@codemirror/state";
 import { basicSetup } from "codemirror";
+import { vim } from "@replit/codemirror-vim"
 
 import '../codeEditor.css';
 
 import { processedQueries } from '../index';
-import { settings } from '../settings';
+import { settings, vimCompartment } from '../settings';
 import { oql } from '../oql-parser';
 
 import { tooltip } from './tooltips';
@@ -76,6 +78,7 @@ const codeContainer = document.querySelector<HTMLDivElement>("#code-container");
 function newEditor(parent: HTMLDivElement, query: string, saveGraph: () => void, id: string): EditorView {
     let editor = new EditorView({
         extensions: [
+            vimCompartment.of(settings.vim() ? vim() : []),
             basicSetup,
             keymap.of({ key: "Tab", run: acceptCompletion } as any),
             keymap.of([indentWithTab]),
@@ -97,6 +100,13 @@ function newEditor(parent: HTMLDivElement, query: string, saveGraph: () => void,
     });
 
     return editor;
+}
+
+/// Dispatch event to all active editors
+export function dispatchToAllEditors(event) {
+    for (const editor of Object.values(codeEditorMap)) {
+        editor.dispatch(event);
+    }
 }
 
 

@@ -24,6 +24,7 @@
     "@codemirror/view": "^6.21.4",
     "@lezer/lr": "^1.3.14",
     "@maplibre/maplibre-gl-geocoder": "^1.5.0",
+    "@replit/codemirror-vim": "^6.0.14",
     "@turf/length": "^6.5.0",
     "@types/geojson": "^7946.0.12",
     "codemirror": "^6.0.1",

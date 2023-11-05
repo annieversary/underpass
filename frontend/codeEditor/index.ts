@@ -1,6 +1,8 @@
-import { EditorView, ViewPlugin, keymap, lineNumbers, rectangularSelection, highlightActiveLine, ViewUpdate } from "@codemirror/view";
-import { tags } from "@lezer/highlight"
-import { HighlightStyle, syntaxHighlighting } from "@codemirror/language"
+import { EditorView, ViewPlugin, keymap, ViewUpdate } from "@codemirror/view";
+import { tags } from "@lezer/highlight";
+import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
+import { acceptCompletion } from "@codemirror/autocomplete";
+import { indentWithTab } from "@codemirror/commands";
 import { basicSetup } from "codemirror";
 
 import '../codeEditor.css';
@@ -75,6 +77,8 @@ function newEditor(parent: HTMLDivElement, query: string, saveGraph: () => void,
     let editor = new EditorView({
         extensions: [
             basicSetup,
+            keymap.of({ key: "Tab", run: acceptCompletion } as any),
+            keymap.of([indentWithTab]),
             syntaxHighlighting(myHighlightStyle),
             ViewPlugin.fromClass(class {
                 update(_update: ViewUpdate) {

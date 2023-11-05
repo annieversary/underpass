@@ -1,0 +1,81 @@
+@top Oql { statement* }
+
+@skip { space | LineComment | LineCommentTitle }
+
+@detectDelim
+
+@tokens {
+    space { @whitespace+ }
+    LineCommentTitle { "///" ![\n]* }
+    LineComment { "//" ![\n]* }
+    @precedence { LineCommentTitle, LineComment }
+
+    Keyword { "node" | "way" | "relation" | "nw" | "wr" | "nr" | "NR" }
+
+    Identifier { ident }
+    //! TODO this is most definitely not ascii but for now
+    ident { (@asciiLetter | "_" | ":" | "|" | @digit)+ }
+
+    macroIdent { (@asciiLetter | "_" | @digit)+ }
+    macroValue { ((@asciiLetter | "_" | "|" | "\"" | @digit)+) }
+
+    Regex { "\"" (![~/\\\n[] | "\\" ![\n] | "[" (![\n\\\]] | "\\" ![\n])* "]")+ "\"" }
+    @precedence { space, Regex }
+
+    "(" ")" "[" "]" "{" "}" "->" "@"
+}
+
+
+
+statement {
+     (Group | Macro | Query)
+     Assignment?
+     ";"
+}
+
+Group {
+      "(" Query* ")"
+}
+
+Query {
+  Keyword SquareFilter* RoundFilter?
+}
+
+SquareFilter {
+    "[" (Tag | Macro) "]"
+}
+RoundFilter {
+    "(" (Tag | Macro) ")"
+}
+
+optionallyQuoted<id> {
+    "\""? id "\""?
+}
+
+Key { optionallyQuoted<Identifier> }
+Value { optionallyQuoted<Identifier> }
+
+Tag {
+  ("~" Regex | Key)
+  ("=" Value | "~" Regex)?
+}
+
+Macro {
+  "{{" macroIdent (":" MacroValue (";" MacroValue)?)? "}}"
+}
+
+MacroValue {
+   macroValue ("@" LanguageCode)?
+}
+
+LanguageCode {
+    ident
+}
+
+Assignment {
+  "->" Set
+}
+
+Set {
+  "." ident
+}

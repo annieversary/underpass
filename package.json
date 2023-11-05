@@ -7,11 +7,13 @@
     "build": "esbuild frontend/index.ts --bundle --sourcemap --target=es2017 --outfile=public/index.js",
     "watch": "esbuild frontend/index.ts --bundle --sourcemap --target=es2017 --outfile=public/index.js --watch",
     "typecheck": "tsc -noEmit --lib es2022,DOM --target es2017 --moduleResolution node --skipLibCheck frontend/index.ts",
-    "prod": "esbuild frontend/index.ts --bundle --minify --target=es2017 --outfile=public/index.js && cp frontend/index.html public"
+    "prod": "esbuild frontend/index.ts --bundle --minify --target=es2017 --outfile=public/index.js && cp frontend/index.html public",
+    "lezer": "lezer-generator frontend/oql-parser/oql.grammar -o frontend/oql-parser/oql.js"
   },
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@lezer/generator": "^1.5.1",
     "esbuild": "0.19.5",
     "typescript": "^5.2.2"
   },
@@ -20,9 +22,11 @@
     "@codemirror/commands": "^6.3.0",
     "@codemirror/language": "^6.9.2",
     "@codemirror/view": "^6.21.4",
+    "@lezer/lr": "^1.3.14",
     "@maplibre/maplibre-gl-geocoder": "^1.5.0",
     "@turf/length": "^6.5.0",
     "@types/geojson": "^7946.0.12",
+    "codemirror": "^6.0.1",
     "events": "^3.3.0",
     "maplibre-gl": "^3.5.2",
     "react": "^18.2.0",

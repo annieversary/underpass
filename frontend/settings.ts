@@ -22,14 +22,12 @@ export const settings = {
     tagsShouldHaveQuotes: () => document.querySelector<HTMLInputElement>('#settings-tags-should-have-quotes').checked,
 };
 
-// TODO we probably want a way to abstract this when we add more settings keys
-const settingsHideEmptyNodes = document.querySelector<HTMLInputElement>('#settings-hide-empty-nodes');
-settingsHideEmptyNodes.checked = window.localStorage.getItem('settings.hideEmptyNodes') === 'true';
-settingsHideEmptyNodes.onchange = function() {
-    window.localStorage.setItem('settings.hideEmptyNodes', settingsHideEmptyNodes.checked.toString());
-};
-const settingsTagsShouldHaveQuotes = document.querySelector<HTMLInputElement>('#settings-tags-should-have-quotes');
-settingsTagsShouldHaveQuotes.checked = window.localStorage.getItem('settings.tagsShouldHaveQuotes') === 'true';
-settingsTagsShouldHaveQuotes.onchange = function() {
-    window.localStorage.setItem('settings.tagsShouldHaveQuotes', settingsTagsShouldHaveQuotes.checked.toString());
-};
+function onChangeCheckbox(selector: string, localStorageId: string) {
+    const f = document.querySelector<HTMLInputElement>(selector);
+    f.checked = window.localStorage.getItem(localStorageId) === 'true';
+    f.onchange = function() {
+        window.localStorage.setItem(localStorageId, f.checked.toString());
+    };
+}
+onChangeCheckbox('#settings-hide-empty-nodes', 'settings.hideEmptyNodes');
+onChangeCheckbox('#settings-tags-should-have-quotes', 'settings.tagsShouldHaveQuotes');

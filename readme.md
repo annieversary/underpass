@@ -1,17 +1,22 @@
 # underpass
 
-(wip name until we decide on something else)
+underpass is a data mining tool based on [overpass turbo](https://overpass-turbo.eu/),
+aiming to implement extra processing/filtering
 
-underpass is a clone of [overpass turbo](https://overpass-turbo.eu/)
-which aims to implement extra processing/filtering of nodes.
-at the moment it has (mostly) feature parity with overpass, so you can definitely use this instead of the original
-
-## improvements over overpass turbo
+## improvements over overpass-turbo
 
 first and foremost, node popups include a link to google maps and a link to copy coordinates for the node.
 this helps smooth the workflow of reviewing results
 
-### geocodeArea
+### code editor
+
+the code editor implements an overpass ql parser, which enables better syntax highlighting and smarter autocomplete
+
+it also adds some features that are common in more fully featured, such as `Ctrl+F` to find/replace, and `Ctrl+D` to select next find match
+
+### overpass ql extensions
+
+#### geocodeArea
 
 using a `geocodeArea` macro will display the found area at the bottom, so you can ensure you are looking in the correct spot
 
@@ -29,8 +34,8 @@ using a `geocodeArea` macro will display the found area at the bottom, so you ca
 
 if no language is specified, `en` is used
 
-### aroundSelf macro
-
+#### aroundSelf macro
+    
 it also implements more macros, such as `aroundSelf`, which works like:
 
 ```
@@ -38,9 +43,15 @@ node["amenity"="bench"]({{bbox}})->.benches;
 {{aroundSelf.benches:7}}->.benchesAroundOtherBenches;
 ```
 
-### out macro
+#### out macro
 
 `{{out}}` simply expands to `out;>;out skel qt;`
+
+### node editor
+
+underpass implements a node editor that allows for powerful filtering that cannot be simply with the overpass API.
+it can be used to set up advanced filters, such as filtering roads by their [bearing](https://en.wikipedia.org/wiki/Bearing_(angle)).
+not many filters have been implemented yet, but more are comming soon
 
 ## building
 

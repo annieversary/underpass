@@ -1,7 +1,10 @@
 # underpass
 
-underpass is a data mining tool based on [overpass turbo](https://overpass-turbo.eu/),
+underpass is a data mining tool inspired by [overpass turbo](https://overpass-turbo.eu/),
 aiming to implement extra processing/filtering
+
+the implementation differs highly from overpass-turbo's, as underpass performs the fetching and filtering steps on a backend,
+instead of directly on the user's browser
 
 ## improvements over overpass-turbo
 
@@ -26,7 +29,7 @@ using a `geocodeArea` macro will display the found area at the bottom, so you ca
 {{geocodeArea:Hokkaido, Japan; Aomori, Japan}}->.japan;
 ```
 
-`geocodeArea` supports specifying what language to search in by adding `@{lang code}`:
+`geocodeArea` also supports specifying what language to search in by adding `@{lang code}`:
 
 ```
 {{geocodeArea:Hokkaido, Japón@es; Madrid, España@es; Île-de-France@fr}}->.places;
@@ -42,16 +45,16 @@ it also implements more macros, such as `aroundSelf`, which works like:
 node["amenity"="bench"]({{bbox}})->.benches;
 {{aroundSelf.benches:7}}->.benchesAroundOtherBenches;
 ```
-
-#### out macro
-
-`{{out}}` simply expands to `out;>;out skel qt;`
-
 ### node editor
 
 underpass implements a node editor that allows for powerful filtering that cannot be simply with the overpass API.
 it can be used to set up advanced filters, such as filtering roads by their [bearing](https://en.wikipedia.org/wiki/Bearing_(angle)).
 not many filters have been implemented yet, but more are comming soon
+
+### map
+
+the map is implemented using the [maplibre gl](https://maplibre.org/maplibre-gl-js/docs/) library,
+which has a better performance when dealing with larger amounts of nodes
 
 ## building
 

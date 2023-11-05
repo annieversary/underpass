@@ -1,4 +1,4 @@
-import { addTab, codeEditorMap, removeTab } from './codeEditor';
+import { addTab, codeEditorMap, removeTab } from './codeEditor/index';
 import { openModal } from './modal';
 import { processedQueries } from './index';
 import { nodeList, oqlNode, roadAngleFilter, map } from './graph-nodes';

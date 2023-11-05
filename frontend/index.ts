@@ -11,6 +11,7 @@ import { serializeGraph } from './graph';
 import { settings } from './settings';
 
 
+
 // resize
 const resizer = document.querySelector("#resizer");
 const left: HTMLDivElement = document.querySelector("#left");

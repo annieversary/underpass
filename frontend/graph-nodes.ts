@@ -1,6 +1,6 @@
 import { ClassicPreset, } from "rete";
 
-import { addTab, } from './codeEditor';
+import { addTab, } from './codeEditor/index';
 import { nodeSelector, editor, saveGraph } from './graph';
 
 

@@ -1,12 +1,13 @@
 import { EditorView, ViewPlugin, keymap, lineNumbers, rectangularSelection, highlightActiveLine, ViewUpdate } from "@codemirror/view";
-import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
-import { closeBrackets } from "@codemirror/autocomplete";
-import { bracketMatching } from "@codemirror/language";
+import { tags } from "@lezer/highlight"
+import { HighlightStyle, syntaxHighlighting } from "@codemirror/language"
+import { basicSetup } from "codemirror";
 
 import '../codeEditor.css';
 
 import { processedQueries } from '../index';
 import { settings } from '../settings';
+import { oql } from '../oql-parser';
 
 import { tooltip } from './tooltips';
 
@@ -73,13 +74,8 @@ const codeContainer = document.querySelector<HTMLDivElement>("#code-container");
 function newEditor(parent: HTMLDivElement, query: string, saveGraph: () => void, id: string): EditorView {
     let editor = new EditorView({
         extensions: [
-            history(),
-            lineNumbers(),
-            rectangularSelection(),
-            highlightActiveLine(),
-            bracketMatching(),
-            closeBrackets(),
-            keymap.of([...defaultKeymap, ...historyKeymap]),
+            basicSetup,
+            syntaxHighlighting(myHighlightStyle),
             ViewPlugin.fromClass(class {
                 update(_update: ViewUpdate) {
                     saveGraph();
@@ -87,6 +83,7 @@ function newEditor(parent: HTMLDivElement, query: string, saveGraph: () => void,
                 }
             }),
             tooltip(),
+            oql(),
         ],
         parent,
     });
@@ -99,4 +96,68 @@ function newEditor(parent: HTMLDivElement, query: string, saveGraph: () => void,
 }
 
 
-
+const myHighlightStyle = HighlightStyle.define([
+    // macro
+    {
+        tag: tags.meta,
+        color: "#4a5"
+    },
+    {
+        tag: tags.link,
+        textDecoration: "underline"
+    },
+    {
+        tag: tags.emphasis,
+        fontStyle: "italic"
+    },
+    {
+        tag: tags.strong,
+        fontWeight: "bold"
+    },
+    {
+        tag: tags.strikethrough,
+        textDecoration: "line-through"
+    },
+    {
+        tag: [tags.operatorKeyword, tags.operator],
+        color: "#ff1493"
+    },
+    {
+        tag: tags.keyword,
+        color: "#708"
+    },
+    {
+        tag: tags.variableName,
+        color: "#66c"
+    },
+    {
+        tag: [tags.atom, tags.bool, tags.url, tags.contentSeparator, tags.labelName],
+        color: "#219"
+    },
+    {
+        tag: [tags.literal, tags.inserted],
+        color: "#164"
+    },
+    {
+        tag: [tags.string, tags.deleted],
+        color: "#a11"
+    },
+    {
+        tag: [tags.regexp, tags.escape, tags.special(tags.string)],
+        color: "#f40"
+    },
+    {
+        tag: tags.docComment,
+        textDecoration: "underline",
+        fontWeight: "bold",
+        color: "#940"
+    },
+    {
+        tag: tags.comment,
+        color: "#940"
+    },
+    {
+        tag: tags.invalid,
+        color: "#f00"
+    }
+]);

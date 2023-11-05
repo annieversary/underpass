@@ -12,8 +12,8 @@
 
     Keyword { "node" | "way" | "relation" | "nw" | "wr" | "nr" | "NR" }
 
-    //! TODO this is most definitely not ascii but for now
     Identifier { ident }
+    //! TODO this is most definitely not ascii but for now
     ident { (@asciiLetter | "_" | ":" | "|" | @digit)+ }
 
     macroIdent { (@asciiLetter | "_" | @digit)+ }
@@ -52,9 +52,12 @@ optionallyQuoted<id> {
     "\""? id "\""?
 }
 
+Key { optionallyQuoted<Identifier> }
+Value { optionallyQuoted<Identifier> }
+
 Tag {
-  ("~" Regex | optionallyQuoted<Identifier>)
-  ("=" optionallyQuoted<Identifier> | "~" Regex)?
+  ("~" Regex | Key)
+  ("=" Value | "~" Regex)?
 }
 
 Macro {

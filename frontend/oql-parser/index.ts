@@ -143,7 +143,6 @@ const oqlLinter = linter(view => {
 
             // search for keys that are close-ish
             const options = Object.keys(taginfo).filter(k => levenshtein(k, key) <= 2);
-            console.log(options);
 
             diagnostics.push({
                 from: node.from,
@@ -171,7 +170,6 @@ const oqlLinter = linter(view => {
 
             // search for values that are close-ish
             const options = tag.values.map(v => v.value).filter(v => levenshtein(v, value) <= 2);
-            console.log(options);
 
             diagnostics.push({
                 from: node.from,

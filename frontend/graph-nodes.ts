@@ -4,7 +4,7 @@ import { addTab, } from './codeEditor/index';
 import { nodeSelector, editor, saveGraph } from './graph';
 
 
-export const nodeList = [
+export const nodeList: [key: string, factory: () => ClassicPreset.Node][] = [
     ["Overpass QL", () => oqlNode(true)],
     ["Road Angle Filter", roadAngleFilter],
     ["Road Length Filter", roadLengthFilter],

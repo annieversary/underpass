@@ -13,7 +13,8 @@ import { AreaPlugin, AreaExtensions } from "rete-area-plugin";
 import { ReactPlugin, Presets, ReactArea2D } from "rete-react-plugin";
 import { ConnectionPlugin, Presets as ConnectionPresets } from "rete-connection-plugin"
 import { Control } from 'rete/_types/presets/classic';
-import { ContextMenuPlugin } from "rete-context-menu-plugin";
+import { ContextMenuExtra, ContextMenuPlugin } from "rete-context-menu-plugin";
+import { ItemsCollection } from 'rete-context-menu-plugin/_types/types';
 
 const container = document.querySelector<HTMLDivElement>('#graph-container');
 
@@ -24,12 +25,12 @@ type Schemes = GetSchemes<
 
 export const editor = new NodeEditor<Schemes>();
 
-type AreaExtra = ReactArea2D<Schemes>;
+type AreaExtra = ReactArea2D<Schemes> | ContextMenuExtra;
 export const area = new AreaPlugin<Schemes, AreaExtra>(container);
 const render = new ReactPlugin<Schemes, AreaExtra>({ createRoot });
 render.addPreset(Presets.classic.setup({
     customize: {
-        control: (p) => ControlComponent
+        control: () => ControlComponent
     }
 }));
 editor.use(area);
@@ -49,7 +50,7 @@ AreaExtensions.simpleNodesOrder(area);
 
 // list addable nodes here
 const contextMenu = new ContextMenuPlugin<Schemes>({
-    items(context, plugin) {
+    items(context, _plugin): ItemsCollection {
         if (context === 'root') {
             const nodeGenerators = nodeList.map(([label, factory], i) => {
                 if (typeof factory != 'function') return;
@@ -267,7 +268,7 @@ async function loadGraph() {
                 }));
             } else {
                 Object.entries(controls).forEach(
-                    ([key, control]) => {
+                    ([key, control]: any) => {
                         if (!control) return;
 
                         const ctrl = new ClassicPreset.InputControl(control.type, {

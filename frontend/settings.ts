@@ -1,4 +1,5 @@
 import { dispatchToAllEditors } from './codeEditor/index';
+import { Transaction } from "@codemirror/state";
 import { vim } from "@replit/codemirror-vim"
 
 import { Compartment } from "@codemirror/state";
@@ -33,7 +34,7 @@ const settingsFields = {
     vim: {
         elementId: '#settings-vim',
         type: 'checkbox',
-        onChange: (v) => dispatchToAllEditors({ effects: vimCompartment.reconfigure(v ? vim() : []) })
+        onChange: (v) => dispatchToAllEditors({ effects: vimCompartment.reconfigure(v ? vim() : []) }),
     },
 };
 
@@ -58,45 +59,3 @@ for (const key of Object.keys(settingsFields)) {
 
 
 export const vimCompartment = new Compartment;
-
-// class CompartmentController {
-//     compartments = {};
-//     controllers = {};
-
-//     register(key, controller) {
-//         this.compartments[key] = new Compartment();
-//         this.controllers[key] = controller;
-//     }
-
-//     get extension() {
-//         return Object.values(this.compartments).map(
-//             (compartment) => compartment.of([])
-//         );
-//     }
-
-//     async update(settings) {
-//         Object.entries(settings).map(async ([key, value]) => {
-//             if (value !== undefined && this.controllers[key]) {
-//                 const newValue = await this.controllers[key](value, settings);
-
-//                 if (newValue !== null) {
-//                     for (const editor of Object.values(codeEditorMap)) {
-//                         editor.dispatch({
-//                             effects: this.compartments[key].reconfigure(newValue || [])
-//                         });
-//                     }
-//                 }
-//             }
-//         });
-//     }
-// }
-
-// export const settingsController = new CompartmentController();
-// settingsController.register(
-//     'vim',
-//     function(v) {
-//         console.log(v);
-//         return v ? vim() : [];
-//     }
-// );
-// settingsController.update({ vim: true });

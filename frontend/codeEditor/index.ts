@@ -3,7 +3,7 @@ import { tags } from "@lezer/highlight";
 import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { acceptCompletion } from "@codemirror/autocomplete";
 import { indentWithTab } from "@codemirror/commands";
-import { Transaction } from "@codemirror/state";
+import { TransactionSpec } from "@codemirror/state";
 import { basicSetup } from "codemirror";
 import { vim } from "@replit/codemirror-vim"
 
@@ -34,13 +34,13 @@ export function addTab(
     // create the tab
     const tab = document.createElement('div');
     tab.onclick = () => {
-        for (const t of tabsEl.children) {
+        for (const t of Array.from(tabsEl.children)) {
             (t as HTMLDivElement).dataset.selected = 'no';
         }
 
         tab.dataset.selected = 'yes';
 
-        for (const e of codeContainer.children) {
+        for (const e of Array.from(codeContainer.children)) {
             (e as HTMLDivElement).dataset.selected = 'no';
         }
 
@@ -103,9 +103,9 @@ function newEditor(parent: HTMLDivElement, query: string, saveGraph: () => void,
 }
 
 /// Dispatch event to all active editors
-export function dispatchToAllEditors(event) {
-    for (const editor of Object.values(codeEditorMap)) {
-        editor.dispatch(event);
+export function dispatchToAllEditors(...event: TransactionSpec[]) {
+    for (const editor of Object.values<EditorView>(codeEditorMap)) {
+        editor.dispatch(...event);
     }
 }
 

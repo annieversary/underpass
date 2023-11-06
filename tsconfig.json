@@ -1,0 +1,15 @@
+{
+    "files": [
+        "frontend/index.ts"
+    ],
+    "compilerOptions": {
+        "lib": [
+            "es2022",
+            "dom"
+        ],
+        "target": "ES2017",
+        "moduleResolution": "node",
+        "skipLibCheck": true,
+        "jsx": "react"
+    }
+}

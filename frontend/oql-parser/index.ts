@@ -3,8 +3,8 @@ import { SyntaxNode } from "@lezer/common";
 import { completeFromList, CompletionSource, ifIn, CompletionContext, Completion } from "@codemirror/autocomplete";
 import { styleTags, tags as t } from "@lezer/highlight";
 
-import { parser } from "./oql.js";
-export { parser } from "./oql.js";
+import { parser } from "./oql";
+export { parser } from "./oql";
 
 import { taginfo, TagKey, TagValue } from "../taginfo.js";
 

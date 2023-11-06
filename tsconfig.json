@@ -10,6 +10,7 @@
         "target": "ES2017",
         "moduleResolution": "node",
         "skipLibCheck": true,
-        "jsx": "react"
+        "jsx": "react",
+        "allowJs": true
     }
 }

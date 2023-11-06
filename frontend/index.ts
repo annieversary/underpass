@@ -1,4 +1,4 @@
-import { GeoJSONSource } from 'maplibre-gl';
+import { GeoJSONSource, MapMouseEvent } from 'maplibre-gl';
 import turfLength from '@turf/length';
 import { GeoJSON, Feature } from 'geojson';
 
@@ -159,7 +159,7 @@ function download(filename: string, json: any) {
 // corner tooltip with coordinates
 const infoDiv = document.getElementById('info');
 
-function updateInfo(e) {
+function updateInfo(e: MapMouseEvent) {
     infoDiv.innerHTML = `${e.lngLat.wrap().lat.toFixed(8)},${e.lngLat.wrap().lng.toFixed(8)}`;
     if (distance) {
         infoDiv.innerHTML += `, distance: ${distance}m`;
@@ -272,7 +272,7 @@ distanceButton.onclick = toggleDistance;
 
 // setup keybindings
 const deltaDistance = 100;
-function easing(t) {
+function easing(t: number) {
     return t * (2 - t);
 }
 map.getCanvas().addEventListener(

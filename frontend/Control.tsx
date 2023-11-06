@@ -29,12 +29,12 @@ export function Control<N extends 'text' | 'number'>(props: { data: ClassicPrese
             type={props.data.type}
             ref={ref}
             readOnly={props.data.readonly}
-            onChange={e => {
-                let val = e.target.value;
-                if (val !== "") {
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                let val: typeof props.data['value'];
+                if (e.target.value !== "") {
                     val = (props.data.type === 'number'
                         ? +e.target.value
-                        : e.target.value) as typeof props.data['value']
+                        : e.target.value) as typeof props.data['value'];
                 }
 
                 setValue(val)

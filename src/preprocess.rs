@@ -109,48 +109,46 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    async fn test_no_macros_does_nothing() {
-        let query = "[out:json][timeout:60];
-node[place=city];
-out;>;out skel qt;";
+    async fn test_empty() {
+        let query = "";
         let nominatim = MockNominatim::new();
 
-        let (processed, _areas) = preprocess_query(query, &Bbox::default(), nominatim)
+        let (processed, _areas) = preprocess_query(query, &Bbox::default(), 60, nominatim)
             .await
             .unwrap();
 
         assert_eq!(
             processed,
             "[out:json][timeout:60];
-node[place=city];
+
+
+
 out;>;out skel qt;"
         )
     }
 
     #[tokio::test]
-    async fn test_out_macro() {
-        let query = "[out:json][timeout:60];
-nw[amenity=drinking_water];
-{{out}}";
+    async fn test_no_macros_does_nothing() {
+        let query = "node[place=city];";
         let nominatim = MockNominatim::new();
 
-        let (processed, _areas) = preprocess_query(query, &Bbox::default(), nominatim)
+        let (processed, _areas) = preprocess_query(query, &Bbox::default(), 60, nominatim)
             .await
             .unwrap();
 
         assert_eq!(
             processed,
             "[out:json][timeout:60];
-nw[amenity=drinking_water];
+
+node[place=city];
+
 out;>;out skel qt;"
         )
     }
 
     #[tokio::test]
     async fn test_bbox_macro() {
-        let query = "[out:json][timeout:60];
-node[amenity=drinking_water]({{bbox}});
-out;>;out skel qt;";
+        let query = "node[amenity=drinking_water]({{bbox}});";
         let nominatim = MockNominatim::new();
 
         let bbox = Bbox {
@@ -158,43 +156,43 @@ out;>;out skel qt;";
             sw: [2.1, 3.0],
         };
 
-        let (processed, _areas) = preprocess_query(query, &bbox, nominatim).await.unwrap();
+        let (processed, _areas) = preprocess_query(query, &bbox, 54, nominatim).await.unwrap();
 
         assert_eq!(
             processed,
-            "[out:json][timeout:60];
+            "[out:json][timeout:54];
+
 node[amenity=drinking_water](2.1,3,0.3,1.2345);
+
 out;>;out skel qt;"
         )
     }
 
     #[tokio::test]
     async fn test_around_self_macro() {
-        let query = "[out:json][timeout:60];
-node[amenity=bench]->.benches;
-{{aroundSelf.benches:7}}->.benchesAroundOtherBenches;
-out;>;out skel qt;";
+        let query = "node[amenity=bench]->.benches;
+{{aroundSelf.benches:7}}->.benchesAroundOtherBenches;";
         let nominatim = MockNominatim::new();
 
-        let (processed, _areas) = preprocess_query(query, &Bbox::default(), nominatim)
+        let (processed, _areas) = preprocess_query(query, &Bbox::default(), 14, nominatim)
             .await
             .unwrap();
 
         assert_eq!(
             processed,
-            "[out:json][timeout:60];
+            "[out:json][timeout:14];
+
 node[amenity=bench]->.benches;
 foreach.benches->.internal__it_AAAAAAAAAA(nwr.benches(around.internal__it_AAAAAAAAAA:7)->.internal__nearby_AAAAAAAAAA; (.internal__nearby_AAAAAAAAAA; - .internal__it_AAAAAAAAAA;)->.internal__others_AAAAAAAAAA; (.internal__collect_AAAAAAAAAA; .internal__others_AAAAAAAAAA;)->.internal__collect_AAAAAAAAAA;); .internal__empty_AAAAAAAAAA->._; .internal__collect_AAAAAAAAAA->.benchesAroundOtherBenches;
+
 out;>;out skel qt;"
         )
     }
 
     #[tokio::test]
     async fn test_geocode_area() {
-        let query = "[out:json][timeout:60];
-{{geocodeArea:Hokkaido, Japan}}->.japan;
-node[place=city](area.japan);
-{{out}}";
+        let query = "{{geocodeArea:Hokkaido, Japan}}->.japan;
+node[place=city](area.japan);";
         let mut nominatim = MockNominatim::new();
 
         nominatim.expect_search().times(1).returning(|_, _| {
@@ -204,25 +202,25 @@ node[place=city](area.japan);
             })
         });
 
-        let (processed, _areas) = preprocess_query(query, &Bbox::default(), nominatim)
+        let (processed, _areas) = preprocess_query(query, &Bbox::default(), 60, nominatim)
             .await
             .unwrap();
 
         assert_eq!(
             processed,
             "[out:json][timeout:60];
+
 (area(id:3606679920);)->.japan;
 node[place=city](area.japan);
+
 out;>;out skel qt;"
         )
     }
 
     #[tokio::test]
     async fn test_geocode_area_multiple() {
-        let query = "[out:json][timeout:60];
-{{geocodeArea:Hokkaido, Japan;Aomori, Japan}}->.japan;
-node[place=city](area.japan);
-{{out}}";
+        let query = "{{geocodeArea:Hokkaido, Japan;Aomori, Japan}}->.japan;
+node[place=city](area.japan);";
 
         let mut nominatim = MockNominatim::new();
         nominatim
@@ -246,25 +244,25 @@ node[place=city](area.japan);
                 })
             });
 
-        let (processed, _areas) = preprocess_query(query, &Bbox::default(), nominatim)
+        let (processed, _areas) = preprocess_query(query, &Bbox::default(), 60, nominatim)
             .await
             .unwrap();
 
         assert_eq!(
             processed,
             "[out:json][timeout:60];
+
 (area(id:3606679920);area(id:3601834655);)->.japan;
 node[place=city](area.japan);
+
 out;>;out skel qt;"
         )
     }
 
     #[tokio::test]
     async fn test_geocode_area_with_langs() {
-        let query = "[out:json][timeout:60];
-{{geocodeArea:Hokkaido, Japan@en;Aomori, Japan@es}}->.japan;
-node[place=city](area.japan);
-{{out}}";
+        let query = "{{geocodeArea:Hokkaido, Japan@en;Aomori, Japan@es}}->.japan;
+node[place=city](area.japan);";
 
         let mut nominatim = MockNominatim::new();
         nominatim
@@ -288,15 +286,17 @@ node[place=city](area.japan);
                 })
             });
 
-        let (processed, _areas) = preprocess_query(query, &Bbox::default(), nominatim)
+        let (processed, _areas) = preprocess_query(query, &Bbox::default(), 60, nominatim)
             .await
             .unwrap();
 
         assert_eq!(
             processed,
             "[out:json][timeout:60];
+
 (area(id:3606679920);area(id:3601834655);)->.japan;
 node[place=city](area.japan);
+
 out;>;out skel qt;"
         )
     }

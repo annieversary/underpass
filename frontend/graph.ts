@@ -180,6 +180,9 @@ area.addPipe(context => {
     return context
 });
 
+
+// TODO move this to separate file
+
 export function serializeGraph() {
     const nodes: any[] = JSON.parse(JSON.stringify(editor.getNodes()));
 

@@ -52,12 +52,12 @@ optionallyQuoted<id> {
     "\""? id "\""?
 }
 
-Key { optionallyQuoted<Identifier> }
-Value { optionallyQuoted<Identifier> }
+Key { Identifier }
+Value { Identifier }
 
 Tag {
-  ("~" Regex | Key)
-  ("=" Value | "~" Regex)?
+  ("~" Regex | optionallyQuoted<Key>)
+  ("=" optionallyQuoted<Value> | "~" Regex)?
 }
 
 Macro {

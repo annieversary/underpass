@@ -2,6 +2,9 @@ import { LRLanguage, LanguageSupport, syntaxTree } from "@codemirror/language";
 import { SyntaxNode } from "@lezer/common";
 import { completeFromList, CompletionSource, ifIn, CompletionContext, Completion } from "@codemirror/autocomplete";
 import { styleTags, tags as t } from "@lezer/highlight";
+import { linter, Diagnostic } from "@codemirror/lint";
+import levenshtein from "js-levenshtein";
+
 
 import { parser } from "./oql";
 export { parser } from "./oql";
@@ -34,14 +37,14 @@ let parserWithMetadata = parser.configure({
     ]
 })
 
-export const exampleLanguage = LRLanguage.define({
+export const oqlLanguage = LRLanguage.define({
     parser: parserWithMetadata,
     languageData: {
         commentTokens: { line: "//" }
     }
 });
 
-export const exampleCompletion = exampleLanguage.data.of({
+export const oqlCompletion = oqlLanguage.data.of({
     autocomplete: concatCompletionSource([
         ifIn(['Key'], completeKeyFromTagInfo),
         ifIn(['Value'], completeValueFromTagInfo),
@@ -85,6 +88,7 @@ function completeKeyFromTagInfo(context: CompletionContext) {
 
 function completeValueFromTagInfo(context: CompletionContext) {
     let pos: SyntaxNode | null = syntaxTree(context.state).resolveInner(context.pos, -1);
+    // get corresponding Key
     let { from, to } = pos.parent.prevSibling.firstChild;
 
     const key = context.state.sliceDoc(from, to);
@@ -129,6 +133,67 @@ function concatCompletionSource(sources: CompletionSource[]): CompletionSource {
     };
 }
 
+
+const oqlLinter = linter(view => {
+    let diagnostics: Diagnostic[] = []
+    syntaxTree(view.state).cursor().iterate(node => {
+        if (node.name == "Key") {
+            const key = view.state.sliceDoc(node.from, node.to);
+            if (taginfo[key]) return;
+
+            // search for keys that are close-ish
+            const options = Object.keys(taginfo).filter(k => levenshtein(k, key) <= 2);
+            console.log(options);
+
+            diagnostics.push({
+                from: node.from,
+                to: node.to,
+                severity: "hint",
+                message: options.length > 0 ?
+                    `'${key}' has not been found. Did you mean: `
+                    : `'${key}' not been found.`,
+                actions: options.map(k => {
+                    return {
+                        name: k,
+                        apply(view, from, to) { view.dispatch({ changes: { from, to, insert: k } }) }
+                    };
+                }),
+            });
+        } else if (node.name == "Value") {
+            let { from, to } = node.node.prevSibling.firstChild;
+
+            const value = view.state.sliceDoc(node.from, node.to);
+            const key = view.state.sliceDoc(from, to);
+            const tag = taginfo[key];
+            if (!tag) return;
+            const val = tag.values.find(v => v.value == value);
+            if (val) return;
+
+            // search for values that are close-ish
+            const options = tag.values.map(v => v.value).filter(v => levenshtein(v, value) <= 2);
+            console.log(options);
+
+            diagnostics.push({
+                from: node.from,
+                to: node.to,
+                severity: "hint",
+                message: options.length > 0 ?
+                    `'${value}' has not been found for '${key}'. Did you mean: `
+                    : `'${value}' has not been found in '${key}'.`,
+                actions: options.map(k => {
+                    return {
+                        name: k,
+                        apply(view, from, to) { view.dispatch({ changes: { from, to, insert: k } }) }
+                    };
+                }),
+            });
+        }
+    });
+    return diagnostics
+})
+
+
+
 export function oql() {
-    return new LanguageSupport(exampleLanguage, [exampleCompletion])
+    return new LanguageSupport(oqlLanguage, [oqlCompletion, oqlLinter])
 }

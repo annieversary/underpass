@@ -7,7 +7,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import '@maplibre/maplibre-gl-geocoder/dist/maplibre-gl-geocoder.css';
 
 import { map, mapBounds } from './map';
-import { serializeGraph } from './graph';
+import { serializeGraph } from './graph/save';
 import { settings } from './settings';
 
 

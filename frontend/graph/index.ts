@@ -1,18 +1,18 @@
-import { addTab, codeEditorMap, removeTab } from '../codeEditor/index';
+import { removeTab } from '../codeEditor/index';
 import { openModal } from '../modal';
 import { processedQueries } from '../index';
-import { nodeList, oqlNode, roadAngleFilter, map } from './nodes';
 
+import { saveGraph, saveEvents } from './save';
+import { nodeList, } from './nodes';
 import { Control as ControlComponent } from './Control';
 
 import './style.css';
 
-import { NodeEditor, GetSchemes, ClassicPreset, getUID } from "rete";
+import { NodeEditor, GetSchemes, ClassicPreset, } from "rete";
 import { createRoot } from "react-dom/client";
 import { AreaPlugin, AreaExtensions } from "rete-area-plugin";
 import { ReactPlugin, Presets, ReactArea2D } from "rete-react-plugin";
 import { ConnectionPlugin, Presets as ConnectionPresets } from "rete-connection-plugin"
-import { Control } from 'rete/_types/presets/classic';
 import { ContextMenuExtra, ContextMenuPlugin } from "rete-context-menu-plugin";
 import { ItemsCollection } from 'rete-context-menu-plugin/_types/types';
 
@@ -179,144 +179,3 @@ area.addPipe(context => {
 
     return context
 });
-
-
-// TODO move this to separate file
-
-export function serializeGraph() {
-    const nodes: any[] = JSON.parse(JSON.stringify(editor.getNodes()));
-
-    for (let i = 0; i < nodes.length; i++) {
-        // set the position so we can use it when loading the graph from localStorage
-        nodes[i].position = area.nodeViews.get(nodes[i].id).position;
-
-        // add query as a control if this is an oql node
-        if (nodes[i].label == "Overpass QL") {
-            nodes[i].controls.query = {
-                id: getUID(),
-                value: codeEditorMap[nodes[i].id].state.doc.toString(),
-            } as Control;
-        }
-    }
-
-    return {
-        nodes,
-        connections: editor.getConnections(),
-    };
-}
-
-/// Events after which to save the graph
-const saveEvents = [
-    'nodecreated',
-    'noderemoved',
-    'connectioncreated',
-    'connectionremoved',
-    'cleared',
-    'nodetranslated',
-    'noderesized',
-    'nodepicked',
-];
-
-let loading = true;
-export function saveGraph() {
-    if (loading) return;
-    const serialized = serializeGraph();
-    window.localStorage.setItem('node-graph', JSON.stringify(serialized));
-}
-
-async function loadGraph() {
-    let nodeGraph = window.localStorage.getItem('node-graph');
-    // nodeGraph = null;
-    if (nodeGraph == null) {
-        await createDefaultGraph();
-    } else {
-        const data = JSON.parse(nodeGraph);
-
-        const selectedNode = data.nodes.find(n => n.selected);
-        const selectedIsOql = selectedNode?.label === 'Overpass QL';
-
-        for (const { id, label, inputs, outputs, controls, position, selected } of data.nodes) {
-            const node = new ClassicPreset.Node(label);
-            node.id = id;
-            Object.entries(inputs).forEach(([key, input]: [string, any]) => {
-                const socket = new ClassicPreset.Socket(input.socket.name);
-                const inp = new ClassicPreset.Input(socket, input.label);
-
-                inp.id = input.id;
-
-                node.addInput(key, input);
-            });
-            Object.entries(outputs).forEach(([key, output]: [string, any]) => {
-                const socket = new ClassicPreset.Socket(output.socket.name);
-                const out = new ClassicPreset.Output(socket, output.label);
-
-                out.id = output.id;
-
-                node.addOutput(key, out);
-            });
-
-            if (label == "Overpass QL") {
-                const name = controls.name.value;
-                const query = controls.query.value;
-                const tab = addTab(node.id, name, selected || !selectedIsOql, () => {
-                    nodeSelector.select(node.id, false);
-                }, saveGraph, query);
-
-                node.addControl("name", new ClassicPreset.InputControl("text", {
-                    initial: name,
-                    change(value) {
-                        tab.innerHTML = `<p>${value}</p>`;
-                        saveGraph();
-                    }
-                }));
-            } else {
-                Object.entries(controls).forEach(
-                    ([key, control]: any) => {
-                        if (!control) return;
-
-                        const ctrl = new ClassicPreset.InputControl(control.type, {
-                            initial: control.value,
-                            readonly: control.readonly,
-                            change() {
-                                saveGraph();
-                            }
-                        });
-                        node.addControl(key, ctrl);
-                    }
-                );
-            }
-
-            await editor.addNode(node);
-            await area.translate(node.id, position);
-            if (selected) {
-                nodeSelector.select(node.id, false);
-            }
-        }
-
-        for (const conn of data.connections) {
-            await editor.addConnection(conn);
-        }
-    }
-
-    setTimeout(zoomToNodes, 10);
-
-    loading = false;
-}
-loadGraph();
-
-async function createDefaultGraph() {
-    const nodeA = oqlNode(true);
-    const nodeB = roadAngleFilter();
-    const nodeC = map();
-
-    await editor.addNode(nodeA);
-    await editor.addNode(nodeB);
-    await editor.addNode(nodeC);
-
-    await editor.addConnection(new ClassicPreset.Connection(nodeA, "out", nodeB, "in"));
-    await editor.addConnection(new ClassicPreset.Connection(nodeB, "out", nodeC, "in"));
-
-    await area.translate(nodeA.id, { x: 50, y: 100 });
-    await area.translate(nodeB.id, { x: 280, y: 100 });
-    await area.translate(nodeC.id, { x: 500, y: 100 });
-}

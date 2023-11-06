@@ -1,7 +1,7 @@
 import { ClassicPreset, } from "rete";
 
-import { addTab, } from './codeEditor/index';
-import { nodeSelector, editor, saveGraph } from './graph';
+import { addTab, } from '../codeEditor/index';
+import { nodeSelector, editor, saveGraph } from './index';
 
 
 export const nodeList: [key: string, factory: () => ClassicPreset.Node][] = [

@@ -1,11 +1,11 @@
-import { addTab, codeEditorMap, removeTab } from './codeEditor/index';
-import { openModal } from './modal';
-import { processedQueries } from './index';
-import { nodeList, oqlNode, roadAngleFilter, map } from './graph-nodes';
+import { addTab, codeEditorMap, removeTab } from '../codeEditor/index';
+import { openModal } from '../modal';
+import { processedQueries } from '../index';
+import { nodeList, oqlNode, roadAngleFilter, map } from './nodes';
 
 import { Control as ControlComponent } from './Control';
 
-import './graph.css';
+import './style.css';
 
 import { NodeEditor, GetSchemes, ClassicPreset, getUID } from "rete";
 import { createRoot } from "react-dom/client";

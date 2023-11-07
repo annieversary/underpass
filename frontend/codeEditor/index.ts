@@ -1,11 +1,11 @@
 import { EditorView, ViewPlugin, keymap, ViewUpdate } from "@codemirror/view";
 import { tags } from "@lezer/highlight";
-import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
+import { HighlightStyle, syntaxHighlighting, syntaxTree } from "@codemirror/language";
 import { acceptCompletion } from "@codemirror/autocomplete";
 import { indentWithTab } from "@codemirror/commands";
 import { TransactionSpec } from "@codemirror/state";
 import { basicSetup } from "codemirror";
-import { vim } from "@replit/codemirror-vim"
+import { vim, Vim } from "@replit/codemirror-vim"
 
 import '../codeEditor.css';
 
@@ -110,6 +110,12 @@ export function dispatchToAllEditors(...event: TransactionSpec[]) {
 }
 
 
+Vim.defineEx('syntax', 'syn', function() {
+    const r = Object.values(codeEditorMap).map(c => syntaxTree((c as any).state).toString());
+    console.log(r);
+});
+
+
 const myHighlightStyle = HighlightStyle.define([
     // macro
     {
@@ -139,6 +145,10 @@ const myHighlightStyle = HighlightStyle.define([
     {
         tag: tags.keyword,
         color: "#708"
+    },
+    {
+        tag: tags.number,
+        color: "#0cf"
     },
     {
         tag: tags.variableName,

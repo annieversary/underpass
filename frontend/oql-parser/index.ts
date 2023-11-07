@@ -14,6 +14,8 @@ import { taginfo, TagKey, TagValue } from "../taginfo.js";
 let parserWithMetadata = parser.configure({
     props: [
         styleTags({
+            Number: t.number,
+
             Tag: t.paren,
             Identifier: t.string,
             Regex: t.regexp,
@@ -27,6 +29,7 @@ let parserWithMetadata = parser.configure({
             Macro: t.meta,
 
             Set: t.variableName,
+            Variable: t.variableName,
             "->": t.operator,
 
             Keyword: t.keyword,

@@ -109,6 +109,13 @@ async function loadGraph() {
                     nodeSelector.select(node.id, false);
                 }, saveGraph, query);
 
+                node.addControl("timeout", new ClassicPreset.InputControl("number", {
+                    initial: controls.timeout?.value ?? 30,
+                    change(value) {
+                        tab.innerHTML = `<p>${value}</p>`;
+                        saveGraph();
+                    }
+                }));
                 node.addControl("name", new ClassicPreset.InputControl("text", {
                     initial: name,
                     change(value) {

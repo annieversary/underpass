@@ -9,9 +9,21 @@ test('parse simple query', () => {
     testTree(tree, spec)
 });
 
+test('parse not exists filter', () => {
+    let tree = parser.parse(`node[!"highway"];`)
+    let spec = `Oql(Query(Keyword,SquareFilter("[",Tag("!",Key(Identifier)),"]")))`;
+    testTree(tree, spec)
+});
+
 test('parse query with set filter', () => {
     let tree = parser.parse(`node.setname["highway"="trunk"];`)
     let spec = `Oql(Query(Keyword,Set(Variable),SquareFilter("[",Tag(Key(Identifier),Value(Identifier)),"]")))`;
+    testTree(tree, spec)
+});
+
+test('parse query with multiple round and square filters', () => {
+    let tree = parser.parse(`node[hi](1234)[hello](5678);`)
+    let spec = `Oql(Query(Keyword,SquareFilter("[",Tag(Key(Identifier)),"]"),RoundFilter("(",Number,")"),SquareFilter("[",Tag(Key(Identifier)),"]"),RoundFilter("(",Number,")")))`;
     testTree(tree, spec)
 });
 
@@ -90,5 +102,11 @@ test('parse is_in empty', () => {
 test('parse out', () => {
     let tree = parser.parse(`out;out skel qt;`)
     let spec = `Oql(Out,Out)`;
+    testTree(tree, spec)
+});
+
+test('parse item', () => {
+    let tree = parser.parse(`.a;.a->.b;`)
+    let spec = `Oql(Set(Variable),Set(Variable),Assignment("->",Set(Variable)))`;
     testTree(tree, spec)
 });

@@ -29,7 +29,7 @@
     SettingName { macroIdent }
     SettingValue { (@asciiLetter | "(" | ")" | "\"" | "," | "." | "-" | "_" | ":" | "|" | @digit)+ }
 
-    "(" ")" "[" "]" "{" "}" "->" "@"
+    "(" ")" "[" "]" "{" "}" "->" "@" "!"
 }
 
 
@@ -43,7 +43,7 @@ statement {
         //! foreach doesnt allow assignment
         Foreach |
         (
-            (Difference | Union | Macro | Query | IsIn | Out | recurse)
+            (Difference | Union | Macro | Query | IsIn | Out | recurse | Set)
             Assignment?
         )
     )
@@ -59,7 +59,7 @@ Difference {
 }
 
 Query {
-  Keyword Set* SquareFilter* RoundFilter?
+  Keyword Set* (SquareFilter | RoundFilter)*
 }
 
 SquareFilter {
@@ -82,7 +82,7 @@ Key { Identifier }
 Value { Identifier }
 
 Tag {
-  ("~" Regex | optionallyQuoted<Key>)
+  ("~" Regex | "!" optionallyQuoted<Key> | optionallyQuoted<Key>)
   ("=" optionallyQuoted<Value> | "~" Regex)?
 }
 

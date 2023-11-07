@@ -188,6 +188,17 @@ const oqlLinter = linter(view => {
                     };
                 }),
             });
+        } else if (node.name == "Settings" || node.name == "Out") {
+            diagnostics.push({
+                from: node.from,
+                to: node.to,
+                severity: "error",
+                message: `${node.name} statements are not allowed`,
+                actions: [{
+                    name: "Remove",
+                    apply(view, from, to) { view.dispatch({ changes: { from, to } }) }
+                }],
+            });
         }
     });
     return diagnostics

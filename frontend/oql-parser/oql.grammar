@@ -1,4 +1,4 @@
-@top Oql { statement* }
+@top Oql { Settings? statement* }
 
 @skip { space | LineComment | LineCommentTitle }
 
@@ -16,25 +16,38 @@
 
     Identifier { ident }
     //! TODO this is most definitely not ascii but for now
-    ident { (@asciiLetter | "_" | ":" | "|" | @digit)+ }
+    ident { (@asciiLetter | "_") (@asciiLetter | "_" | ":" | "|" | @digit)* }
 
     macroIdent { (@asciiLetter | "_" | @digit)+ }
     macroValue { ((@asciiLetter | "_" | "|" | "\"" | @digit)+) }
 
-    Number { @digit+ }
+    Number { @digit+ ("." @digit+)? }
 
     Regex { "\"" (![~/\\\n[] | "\\" ![\n] | "[" (![\n\\\]] | "\\" ![\n])* "]")+ "\"" }
     @precedence { space, Regex }
+
+    SettingName { macroIdent }
+    SettingValue { (@asciiLetter | "(" | ")" | "\"" | "," | "." | "-" | "_" | ":" | "|" | @digit)+ }
 
     "(" ")" "[" "]" "{" "}" "->" "@"
 }
 
 
 
+Settings {
+    ( "[" SettingName ":" SettingValue "]" )+ ";"
+}
+
 statement {
-     (Difference | Union | Macro | Query)
-     Assignment?
-     ";"
+    (
+        //! foreach doesnt allow assignment
+        Foreach |
+        (
+            (Difference | Union | Macro | Query | IsIn | Out | recurse)
+            Assignment?
+        )
+    )
+    ";"
 }
 
 Union {
@@ -46,7 +59,7 @@ Difference {
 }
 
 Query {
-  Keyword SquareFilter* RoundFilter?
+  Keyword Set* SquareFilter* RoundFilter?
 }
 
 SquareFilter {
@@ -91,4 +104,23 @@ Assignment {
 
 Set {
   "." Variable
+}
+
+Foreach {
+    "foreach" Set? Assignment? "(" statement* ")"
+}
+
+recurse { Set? (RecurseUp | RecurseUpRelations | RecurseDown | RecurseDownRelations) }
+
+RecurseUp { "<" }
+RecurseUpRelations { "<<" }
+RecurseDown { ">" }
+RecurseDownRelations { ">>" }
+
+IsIn {
+  Set? "is_in" ( "(" Number "," Number ")" )?
+}
+
+Out {
+  Set? "out" ( ident | Number | "(" | ")" )*
 }

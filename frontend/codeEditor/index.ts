@@ -78,6 +78,8 @@ const codeContainer = document.querySelector<HTMLDivElement>("#code-container");
 function newEditor(parent: HTMLDivElement, query: string, saveGraph: () => void, id: string): EditorView {
     let editor = new EditorView({
         extensions: [
+            keymap.of([{ key: "Cmd-Enter", run: () => { return true; } }]),
+            keymap.of([{ key: "Ctrl-Enter", run: () => { return true; } }]),
             vimCompartment.of(settings.vim() ? vim() : []),
             basicSetup,
             keymap.of({ key: "Tab", run: acceptCompletion } as any),

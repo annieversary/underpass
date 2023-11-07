@@ -122,6 +122,7 @@ async function run() {
 document.querySelector<HTMLButtonElement>('#run-button').onclick = run;
 document.addEventListener('keydown', (event) => {
     if ((event.ctrlKey || event.metaKey) && event.key == "Enter") {
+        event.preventDefault();
         run();
     }
 });

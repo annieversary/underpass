@@ -1,7 +1,7 @@
 import { addTab, codeEditorMap } from '../codeEditor/index';
 
 import { editor, nodeSelector, area, zoomToNodes } from './index';
-import { oqlNode, map } from './nodes';
+import { oqlNode, map, Control, ExtraProperties } from './nodes';
 
 import { ClassicPreset, getUID } from "rete";
 
@@ -16,6 +16,7 @@ type SerializedNode = {
             type: 'text' | 'number';
             value: string | number;
             readonly: boolean;
+            properties: ExtraProperties;
         }
     };
     position: {
@@ -42,6 +43,7 @@ export function serializeGraph(): {
                 type: 'text',
                 value: codeEditorMap[nodes[i].id].state.doc.toString(),
                 readonly: true,
+                properties: {}
             };
         }
     }
@@ -109,31 +111,25 @@ async function loadGraph() {
                     nodeSelector.select(node.id, false);
                 }, saveGraph, query);
 
-                node.addControl("timeout", new ClassicPreset.InputControl("number", {
-                    initial: controls.timeout?.value ?? 30,
-                    change(value) {
-                        tab.innerHTML = `<p>${value}</p>`;
-                        saveGraph();
-                    }
-                }));
                 node.addControl("name", new ClassicPreset.InputControl("text", {
                     initial: name,
                     change(value) {
                         tab.innerHTML = `<p>${value}</p>`;
-                        saveGraph();
                     }
+                }));
+                node.addControl("timeout", new Control("number", {
+                    initial: controls.timeout?.value ?? 30,
+                    properties: controls.timeout?.properties,
                 }));
             } else {
                 Object.entries(controls).forEach(
                     ([key, control]: any) => {
                         if (!control) return;
 
-                        const ctrl = new ClassicPreset.InputControl(control.type, {
+                        const ctrl = new Control(control.type, {
                             initial: control.value,
                             readonly: control.readonly,
-                            change() {
-                                saveGraph();
-                            }
+                            properties: control.properties,
                         });
                         node.addControl(key, ctrl);
                     }

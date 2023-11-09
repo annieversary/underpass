@@ -1,6 +1,7 @@
 import * as React from 'react'
-import { ClassicPreset } from 'rete'
 import styled from 'styled-components'
+
+import { Control as InputControl } from "./nodes";
 
 const Input = styled.input<{ styles?: (props: any) => any }>`
   width: 100%;
@@ -11,9 +12,9 @@ const Input = styled.input<{ styles?: (props: any) => any }>`
   font-size: 110%;
   box-sizing: border-box;
   ${props => props.styles && props.styles(props)}
-`
+`;
 
-export function Control<N extends 'text' | 'number'>(props: { data: ClassicPreset.InputControl<N>, styles?: () => any }) {
+export function Control<N extends 'text' | 'number'>(props: { data: InputControl<N>, styles?: () => any }) {
     const [value, setValue] = React.useState(props.data.value)
     const ref = React.useRef(null)
 
@@ -41,6 +42,7 @@ export function Control<N extends 'text' | 'number'>(props: { data: ClassicPrese
                 props.data.setValue(val)
             }}
             styles={props.styles}
+            {...props.data.options.properties}
         />
     )
 }

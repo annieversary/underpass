@@ -4,6 +4,49 @@ import { addTab, } from '../codeEditor/index';
 import { nodeSelector, editor, } from './index';
 import { saveGraph } from './save';
 
+/**
+ * Input control options
+ */
+export type InputControlOptions<N> = {
+    /** Whether the control is readonly. Default is `false` */
+    readonly?: boolean,
+    /** Initial value of the control */
+    initial?: N,
+    /** Callback function that is called when the control value changes */
+    change?: (value: N) => void
+    properties?: ExtraProperties;
+}
+
+export type ExtraProperties = {
+    min?: number;
+    max?: number;
+};
+
+/**
+ * The input control class
+ * @example new InputControl('text', { readonly: true, initial: 'hello' })
+ */
+export class Control<T extends 'text' | 'number', N = T extends 'text' ? string : number> extends ClassicPreset.InputControl<T, N> {
+    properties: ExtraProperties;
+
+    /**
+     * @constructor
+     * @param type Type of the control: `text` or `number`
+     * @param options Control options
+     */
+    constructor(public type: T, public options?: InputControlOptions<N>) {
+        options = options ?? {};
+        options.change = (value: N) => {
+            if (options.change) options.change(value);
+            saveGraph();
+        }
+
+        super(type, options)
+        this.properties = options.properties;
+    }
+}
+
+
 
 export const nodeList: [key: string, factory: () => ClassicPreset.Node][] = [
     ["Overpass QL", () => oqlNode(true)],
@@ -25,17 +68,18 @@ export function oqlNode(selected: boolean): ClassicPreset.Node {
         nodeSelector.select(nodeA.id, false);
     }, saveGraph);
 
-    nodeA.addControl("name", new ClassicPreset.InputControl("text", {
+
+    nodeA.addControl("name", new Control("text", {
         initial: name,
         change(value) {
             tab.innerHTML = `<p>${value}</p>`;
-            saveGraph();
         }
     }));
-    nodeA.addControl("timeout", new ClassicPreset.InputControl("number", {
+    nodeA.addControl("timeout", new Control("number", {
         initial: 30,
-        change() {
-            saveGraph();
+        properties: {
+            min: 0,
+            max: 120,
         }
     }));
 
@@ -46,16 +90,18 @@ export function roadAngleFilter(): ClassicPreset.Node {
     const nodeC = new ClassicPreset.Node("Road Angle Filter");
     nodeC.addInput("in", new ClassicPreset.Input(socket));
     nodeC.addOutput("out", new ClassicPreset.Output(socket));
-    nodeC.addControl("min", new ClassicPreset.InputControl("number", {
+    nodeC.addControl("min", new Control("number", {
         initial: 30.00,
-        change() {
-            saveGraph();
+        properties: {
+            min: -90.0,
+            max: 90,
         }
     }));
-    nodeC.addControl("max", new ClassicPreset.InputControl("number", {
+    nodeC.addControl("max", new Control("number", {
         initial: 35.0,
-        change() {
-            saveGraph();
+        properties: {
+            min: -90.0,
+            max: 90,
         }
     }));
     return nodeC;
@@ -65,22 +111,22 @@ export function roadLengthFilter(): ClassicPreset.Node {
     const nodeC = new ClassicPreset.Node("Road Length Filter");
     nodeC.addInput("in", new ClassicPreset.Input(socket));
     nodeC.addOutput("out", new ClassicPreset.Output(socket));
-    nodeC.addControl("min", new ClassicPreset.InputControl("number", {
+    nodeC.addControl("min", new Control("number", {
         initial: 30.00,
-        change() {
-            saveGraph();
+        properties: {
+            min: 0.0,
         }
     }));
-    nodeC.addControl("max", new ClassicPreset.InputControl("number", {
+    nodeC.addControl("max", new Control("number", {
         initial: 35.0,
-        change() {
-            saveGraph();
+        properties: {
+            min: 0.0,
         }
     }));
-    nodeC.addControl("tolerance", new ClassicPreset.InputControl("number", {
+    nodeC.addControl("tolerance", new Control("number", {
         initial: 10.0,
-        change() {
-            saveGraph();
+        properties: {
+            min: 0.0,
         }
     }));
     return nodeC;

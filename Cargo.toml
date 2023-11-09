@@ -21,6 +21,10 @@ geo = "0.26.0"
 async-recursion = "1.0.5"
 petgraph = "0.6.4"
 scraper = "0.18.1"
+tracing = "0.1.40"
+tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
+tracing-appender = "0.2.2"
+backtrace = "0.3.69"
 
 [dev-dependencies]
 mockall = "0.11.2"

@@ -16,7 +16,7 @@ type SerializedNode = {
             type: 'text' | 'number';
             value: string | number;
             readonly: boolean;
-            properties: ExtraProperties;
+            properties: ExtraProperties<string | number>;
         }
     };
     position: {

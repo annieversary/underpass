@@ -3,7 +3,7 @@ import styled from 'styled-components'
 
 import { Control as InputControl } from "./nodes";
 
-const Input = styled.input<{ styles?: (props: any) => any }>`
+const Input = styled.input<{ styles?: (props: any) => any, style: any }>`
   width: 100%;
   border-radius: 30px;
   background-color: white;
@@ -11,12 +11,31 @@ const Input = styled.input<{ styles?: (props: any) => any }>`
   border: 1px solid #999;
   font-size: 110%;
   box-sizing: border-box;
+  ${props => props.style}
   ${props => props.styles && props.styles(props)}
 `;
 
+
 export function Control<N extends 'text' | 'number'>(props: { data: InputControl<N>, styles?: () => any }) {
+    const properties = props.data.options.properties;
+
+    function isError(val: N extends 'text' ? string : number): boolean {
+        if (properties) {
+            if ("min" in properties && typeof val === 'number') {
+                if (val < properties.min) return true;
+            }
+            if ("max" in properties && typeof val === 'number') {
+                if (properties.max < val) return true;
+            }
+        }
+        return false;
+    }
+
+
     const [value, setValue] = React.useState(props.data.value)
     const ref = React.useRef(null)
+
+    const [error, setError] = React.useState(isError(props.data.value));
 
     useNoDrag(ref)
 
@@ -38,11 +57,14 @@ export function Control<N extends 'text' | 'number'>(props: { data: InputControl
                         : e.target.value) as typeof props.data['value'];
                 }
 
+                setError(isError(val));
+
                 setValue(val)
                 props.data.setValue(val)
             }}
+            style={error ? { background: "#f76464" } : {}}
             styles={props.styles}
-            {...props.data.options.properties}
+            {...properties}
         />
     )
 }

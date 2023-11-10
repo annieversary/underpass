@@ -14,20 +14,20 @@ export type InputControlOptions<N> = {
     initial?: N,
     /** Callback function that is called when the control value changes */
     change?: (value: N) => void
-    properties?: ExtraProperties;
+    properties?: ExtraProperties<N>;
 }
 
-export type ExtraProperties = {
+export type ExtraProperties<N> = N extends number ? {
     min?: number;
     max?: number;
-};
+} : {};
 
 /**
  * The input control class
  * @example new InputControl('text', { readonly: true, initial: 'hello' })
  */
 export class Control<T extends 'text' | 'number', N = T extends 'text' ? string : number> extends ClassicPreset.InputControl<T, N> {
-    properties: ExtraProperties;
+    properties: ExtraProperties<N>;
 
     /**
      * @constructor
@@ -35,9 +35,11 @@ export class Control<T extends 'text' | 'number', N = T extends 'text' ? string 
      * @param options Control options
      */
     constructor(public type: T, public options?: InputControlOptions<N>) {
+        let origChange = options.change;
+
         options = options ?? {};
         options.change = (value: N) => {
-            if (options.change) options.change(value);
+            if (origChange) origChange(value);
             saveGraph();
         }
 

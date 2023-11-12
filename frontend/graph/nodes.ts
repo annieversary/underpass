@@ -15,6 +15,9 @@ export type InputControlOptions<N> = {
     /** Callback function that is called when the control value changes */
     change?: (value: N) => void
     properties?: ExtraProperties<N>;
+
+    label?: string;
+    tooltip?: string;
 }
 
 export type ExtraProperties<N> = N extends number ? {
@@ -28,6 +31,8 @@ export type ExtraProperties<N> = N extends number ? {
  */
 export class Control<T extends 'text' | 'number', N = T extends 'text' ? string : number> extends ClassicPreset.InputControl<T, N> {
     properties: ExtraProperties<N>;
+    label?: string;
+    tooltip?: string;
 
     /**
      * @constructor
@@ -35,7 +40,7 @@ export class Control<T extends 'text' | 'number', N = T extends 'text' ? string 
      * @param options Control options
      */
     constructor(public type: T, public options?: InputControlOptions<N>) {
-        let origChange = options.change;
+        let origChange = options?.change;
 
         options = options ?? {};
         options.change = (value: N) => {
@@ -45,6 +50,8 @@ export class Control<T extends 'text' | 'number', N = T extends 'text' ? string 
 
         super(type, options)
         this.properties = options.properties;
+        this.label = options?.label;
+        this.tooltip = options?.tooltip;
     }
 }
 
@@ -73,12 +80,16 @@ export function oqlNode(selected: boolean): ClassicPreset.Node {
 
     nodeA.addControl("name", new Control("text", {
         initial: name,
+        label: 'name',
+        tooltip: 'used to distinguish this Overpass QL block from others',
         change(value) {
             tab.innerHTML = `<p>${value}</p>`;
         }
     }));
     nodeA.addControl("timeout", new Control("number", {
         initial: 30,
+        label: 'timeout',
+        tooltip: 'timeout value to use for the Overpass API on this Overpass QL block',
         properties: {
             min: 0,
             max: 120,
@@ -94,6 +105,7 @@ export function roadAngleFilter(): ClassicPreset.Node {
     nodeC.addOutput("out", new ClassicPreset.Output(socket));
     nodeC.addControl("min", new Control("number", {
         initial: 30.00,
+        label: 'min',
         properties: {
             min: -90.0,
             max: 90,
@@ -101,6 +113,7 @@ export function roadAngleFilter(): ClassicPreset.Node {
     }));
     nodeC.addControl("max", new Control("number", {
         initial: 35.0,
+        label: 'max',
         properties: {
             min: -90.0,
             max: 90,
@@ -115,12 +128,14 @@ export function roadLengthFilter(): ClassicPreset.Node {
     nodeC.addOutput("out", new ClassicPreset.Output(socket));
     nodeC.addControl("min", new Control("number", {
         initial: 30.00,
+        label: 'min',
         properties: {
             min: 0.0,
         }
     }));
     nodeC.addControl("max", new Control("number", {
         initial: 35.0,
+        label: 'max',
         properties: {
             min: 0.0,
         }

@@ -3,6 +3,9 @@ import styled from 'styled-components'
 
 import { Control as InputControl } from "./nodes";
 
+const Label = styled.label`
+    color: white;
+`;
 const Input = styled.input<{ styles?: (props: any) => any, style: any }>`
   width: 100%;
   border-radius: 30px;
@@ -43,29 +46,33 @@ export function Control<N extends 'text' | 'number'>(props: { data: InputControl
         setValue(props.data.value)
     }, [props.data.value])
 
+
     return (
-        <Input
-            value={value}
-            type={props.data.type}
-            ref={ref}
-            readOnly={props.data.readonly}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                let val: typeof props.data['value'];
-                if (e.target.value !== "") {
-                    val = (props.data.type === 'number'
-                        ? +e.target.value
-                        : e.target.value) as typeof props.data['value'];
-                }
+        <Label title={props.data.tooltip}>
+            {props.data.label}
+            <Input
+                value={value}
+                type={props.data.type}
+                ref={ref}
+                readOnly={props.data.readonly}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    let val: typeof props.data['value'];
+                    if (e.target.value !== "") {
+                        val = (props.data.type === 'number'
+                            ? +e.target.value
+                            : e.target.value) as typeof props.data['value'];
+                    }
 
-                setError(isError(val));
+                    setError(isError(val));
 
-                setValue(val)
-                props.data.setValue(val)
-            }}
-            style={error ? { background: "#f76464" } : {}}
-            styles={props.styles}
-            {...properties}
-        />
+                    setValue(val)
+                    props.data.setValue(val)
+                }}
+                style={error ? { background: "#f76464" } : {}}
+                styles={props.styles}
+                {...properties}
+            />
+        </Label>
     )
 }
 

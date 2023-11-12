@@ -17,6 +17,8 @@ type SerializedNode = {
             value: string | number;
             readonly: boolean;
             properties: ExtraProperties<string | number>;
+            label: string;
+            tooltip: string;
         }
     };
     position: {
@@ -43,7 +45,9 @@ export function serializeGraph(): {
                 type: 'text',
                 value: codeEditorMap[nodes[i].id].state.doc.toString(),
                 readonly: true,
-                properties: {}
+                properties: {},
+                label: '',
+                tooltip: '',
             };
         }
     }
@@ -111,8 +115,10 @@ async function loadGraph() {
                     nodeSelector.select(node.id, false);
                 }, saveGraph, query);
 
-                node.addControl("name", new ClassicPreset.InputControl("text", {
+                node.addControl("name", new Control("text", {
                     initial: name,
+                    label: controls.name.label,
+                    tooltip: controls.name.tooltip,
                     change(value) {
                         tab.innerHTML = `<p>${value}</p>`;
                     }
@@ -120,6 +126,8 @@ async function loadGraph() {
                 node.addControl("timeout", new Control("number", {
                     initial: controls.timeout?.value ?? 30,
                     properties: controls.timeout?.properties,
+                    label: controls.timeout.label,
+                    tooltip: controls.timeout.tooltip,
                 }));
             } else {
                 Object.entries(controls).forEach(
@@ -130,6 +138,8 @@ async function loadGraph() {
                             initial: control.value,
                             readonly: control.readonly,
                             properties: control.properties,
+                            label: control.label,
+                            tooltip: control.tooltip,
                         });
                         node.addControl(key, ctrl);
                     }

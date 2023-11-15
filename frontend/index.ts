@@ -93,7 +93,7 @@ async function run() {
         } else {
             if (res.format == 'xml') {
                 const dom = new window.DOMParser().parseFromString(
-                    res.error,
+                    res.message,
                     "text/xml"
                 );
                 alert(

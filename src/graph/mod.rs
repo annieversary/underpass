@@ -96,7 +96,7 @@ pub enum GraphError {
     MapMissing,
     #[error("Node has no input")]
     InputMissing { node_id: String },
-    #[error("Node requires an input but it has none")]
+    #[error("Oql syntax error")]
     OqlSyntax {
         node_id: String,
         error: String,

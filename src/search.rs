@@ -71,8 +71,13 @@ impl IntoResponse for SearchError {
         let map = json.as_object_mut().unwrap();
 
         match &self {
-            Self::Graph(GraphError::OqlSyntax { query, node_id, .. }) => {
+            Self::Graph(GraphError::OqlSyntax {
+                query,
+                node_id,
+                error,
+            }) => {
                 map.insert("query".to_string(), query.clone().into());
+                map.insert("message".to_string(), error.clone().into());
                 map.insert("node_id".to_string(), node_id.clone().into());
             }
             Self::Graph(GraphError::InputMissing { node_id, .. }) => {

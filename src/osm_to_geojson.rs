@@ -12,10 +12,18 @@ pub fn osm_to_geojson(osm: Osm) -> FeatureCollection {
         }
     }));
 
+    let way_map = BTreeMap::from_iter(osm.elements.iter().flat_map(|n| {
+        if let Element::Way(way) = n {
+            way.nodes.iter().map(|node| (*node, way.id)).collect()
+        } else {
+            vec![]
+        }
+    }));
+
     let features = osm
         .elements
         .into_iter()
-        .map(|el| element_to_feature(&el, &node_map))
+        .map(|el| element_to_feature(&el, &node_map, &way_map))
         .collect();
 
     FeatureCollection {
@@ -25,7 +33,11 @@ pub fn osm_to_geojson(osm: Osm) -> FeatureCollection {
     }
 }
 
-fn element_to_feature(el: &Element, node_map: &BTreeMap<u64, Vec<f64>>) -> Feature {
+fn element_to_feature(
+    el: &Element,
+    node_map: &BTreeMap<u64, Vec<f64>>,
+    way_map: &BTreeMap<u64, u64>,
+) -> Feature {
     let mut feat = Feature {
         id: Some(feature::Id::Number(el.id().into())),
         geometry: Some(element_to_geometry(el, node_map)),
@@ -36,6 +48,8 @@ fn element_to_feature(el: &Element, node_map: &BTreeMap<u64, Vec<f64>>) -> Featu
     // > an heuristic has to be applied to determine whether a way is a Line or a Polygon
     // https://wiki.openstreetmap.org/wiki/Overpass_turbo/Polygon_Features
 
+    // NOTE: any properties that begin with `__` will not be displayed
+
     if let serde_json::Value::Object(mut obj) = el
         .tags()
         .cloned()
@@ -43,6 +57,18 @@ fn element_to_feature(el: &Element, node_map: &BTreeMap<u64, Vec<f64>>) -> Featu
     {
         obj.insert("osm_id".to_string(), el.id().into());
         obj.insert("osm_type".to_string(), el.osm_type().to_string().into());
+
+        match &el {
+            Element::Way(way) => {
+                obj.insert("__children_ids".to_string(), way.nodes.clone().into());
+            }
+            Element::Node(node) => {
+                if let Some(way_id) = way_map.get(&node.id) {
+                    obj.insert("__way_id".to_string(), (*way_id).into());
+                }
+            }
+            _ => (),
+        }
 
         feat.properties = Some(obj);
     }

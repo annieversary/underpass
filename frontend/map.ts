@@ -1,4 +1,4 @@
-import maplibregl, { MapLayerEventType, GeoJSONSource, AddLayerObject, Map, Popup } from 'maplibre-gl';
+import maplibregl, { MapLayerEventType, GeoJSONSource, AddLayerObject, Map, Popup, MapGeoJSONFeature } from 'maplibre-gl';
 import MaplibreGeocoder from '@maplibre/maplibre-gl-geocoder';
 
 let [zoom, lat, lng] = JSON.parse(window.localStorage.getItem("viewport")) || [
@@ -66,23 +66,28 @@ map.on("style.load", () => {
             const f = e.features[0];
 
             const props = Object.entries(f.properties)
+                .filter(([k, _]) => !k.startsWith("__"))
                 .map(([k, v]) => `${k} = ${v}`)
                 .join('<br>');
 
             const osm_id = f.properties.osm_id;
             const osm_type = f.properties.osm_type
 
-            const html = `<a href="//www.openstreetmap.org/${osm_type}/${osm_id}" target="_blank" class="osm-link">${osm_id}</a><br/><br/>
+            const div = document.createElement('div');
+            div.innerHTML = `<a href="//www.openstreetmap.org/${osm_type}/${osm_id}" target="_blank" class="osm-link">${osm_id}</a><br/><br/>
             ${props}<br/><br/>
-            <a href="https://google.co.uk/maps?q=${e.lngLat.lat},${e.lngLat.lng}" target="_blank" class="map-link"
-                onclick="map.setFeatureState({source: 'OverpassAPI', id: ${f.id}}, {visited: true}); "
-            >google maps</a><br/>
+            <a href="https://google.co.uk/maps?q=${e.lngLat.lat},${e.lngLat.lng}" target="_blank" class="map-link google-maps-link">google maps</a>
+            <br/>
             <a href="javascript:navigator.clipboard.writeText('${e.lngLat.lat},${e.lngLat.lng}')" class="map-link">copy</a>
             `;
 
+            div.querySelector<HTMLAnchorElement>('.google-maps-link').onclick = () => {
+                markAsVisited(f, true);
+            };
+
             new Popup()
                 .setLngLat(e.lngLat)
-                .setHTML(html)
+                .setDOMContent(div)
                 .addTo(map)
                 .on('close', () => f.id ? map.setFeatureState(
                     { source: 'OverpassAPI', id: f.id },
@@ -99,12 +104,43 @@ map.on("style.load", () => {
         function openContextMenu(e: MapLayerEventType['contextmenu'] & Object) {
             const f = e.features[0];
 
-            // TODO add [id, 'node|way|relation'] to a "visited" array
-            // we dont have access to either of those things here sadly so idk if its doable
+            // TODO if f.osm
+            if (f.properties.osm_type == 'node' && f.properties.__way_id) {
+                const feats = map.querySourceFeatures('OverpassAPI', { filter: ['==', 'osm_id', f.properties.__way_id] });
+                if (feats.length == 0) return;
+                const feat = feats[0];
+                const state = map.getFeatureState({
+                    source: 'OverpassAPI',
+                    id: feat.id,
+                });
+                markAsVisited(feat, !state.visited);
+            } else {
+                markAsVisited(f, !f.state.visited);
+            }
+        }
+
+        let justMarkedAsVisited = false;
+
+        /// Marks the feature as visited, and if it's a way, it marks all corresponding nodes too
+        function markAsVisited(feature: MapGeoJSONFeature, visited: boolean) {
+            // debounce so we dont open two popups at once with the same click
+            if (justMarkedAsVisited) return;
+            justMarkedAsVisited = true;
+            setTimeout(() => justMarkedAsVisited = false, 100);
+
+            if (feature.properties.osm_type == 'way' && feature.properties.__children_ids) {
+                const ids = JSON.parse(feature.properties.__children_ids);
+                for (const id of ids) {
+                    map.setFeatureState(
+                        { source: 'OverpassAPI', id: id },
+                        { visited }
+                    );
+                }
+            }
 
             map.setFeatureState(
-                { source: 'OverpassAPI', id: f.id },
-                { visited: !f.state.visited }
+                { source: 'OverpassAPI', id: feature.id },
+                { visited }
             );
         }
 
@@ -178,8 +214,7 @@ const geocoderApi = {
         const features = [];
         try {
             const request =
-                `https://nominatim.openstreetmap.org/search?q=${
-                config.query
+                `https://nominatim.openstreetmap.org/search?q=${config.query
                 }&format=geojson&polygon_geojson=1&addressdetails=1`;
             const response = await fetch(request);
             const geojson = await response.json();

@@ -89,6 +89,18 @@ impl<'a> NodeProcessor<'a> {
 
         let res: Result<FeatureCollection, SearchError> = match &n.node {
             GraphNodeInternal::Map {} => unreachable!(),
+            GraphNodeInternal::Union {} => {
+                let a_con = self.find_connection(n, Some("a"))?;
+                let a_prev = self.get_node(&a_con.source)?;
+                let mut a_collection = self.process_node(a_prev).await?;
+
+                let b_con = self.find_connection(n, Some("b"))?;
+                let b_prev = self.get_node(&b_con.source)?;
+                let b_collection = self.process_node(b_prev).await?;
+
+                a_collection.features.extend(b_collection.features);
+                Ok(a_collection)
+            }
             GraphNodeInternal::Oql { query, timeout } => {
                 let (query, found_areas) =
                     preprocess_query(&query.value, &self.bbox, timeout.value, OsmNominatim).await?;

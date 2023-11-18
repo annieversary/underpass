@@ -59,6 +59,7 @@ export class Control<T extends 'text' | 'number', N = T extends 'text' ? string 
 
 export const nodeList: [key: string, factory: () => ClassicPreset.Node][] = [
     ["Overpass QL", () => oqlNode(true)],
+    ["Union", union],
     ["Road Angle Filter", roadAngleFilter],
     ["Road Length Filter", roadLengthFilter],
 ];
@@ -153,4 +154,12 @@ export function map(): ClassicPreset.Node {
     const nodeB = new ClassicPreset.Node("Map");
     nodeB.addInput("in", new ClassicPreset.Input(socket));
     return nodeB;
+}
+
+export function union(): ClassicPreset.Node {
+    const node = new ClassicPreset.Node("Union");
+    node.addInput("a", new ClassicPreset.Input(socket));
+    node.addInput("b", new ClassicPreset.Input(socket));
+    node.addOutput("out", new ClassicPreset.Output(socket));
+    return node;
 }

@@ -64,6 +64,7 @@ pub enum GraphNodeInternal {
         max: Control<f64>,
         tolerance: Control<f64>,
     },
+    Union {},
     InViewOf {},
 }
 

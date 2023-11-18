@@ -51,6 +51,7 @@ export const oqlCompletion = oqlLanguage.data.of({
     autocomplete: concatCompletionSource([
         ifIn(['Key'], completeKeyFromTagInfo),
         ifIn(['Value'], completeValueFromTagInfo),
+        ifIn(['Variable'], completeVariable),
         ifIn(['Macro'], completeFromList([
             { label: "bbox", type: "keyword" },
             { label: "center", type: "keyword" },
@@ -71,6 +72,24 @@ export const oqlCompletion = oqlLanguage.data.of({
 
 let taginfoAutocomplete = [];
 let validForMatch = null;
+
+function completeVariable(context: CompletionContext) {
+    let vars = [];
+    syntaxTree(context.state).cursor().iterate(node => {
+        if (node.name == "Variable" && !(node.from <= context.pos && context.pos <= node.to)) {
+            vars.push(context.state.sliceDoc(node.from, node.to));
+        }
+    })
+
+    const options = vars.map((label: string) => {
+        return { label, type: "keyword" };
+    });
+
+    let [validFor, match] = options.every(o => /^\w+$/.test(o.label)) ? [/\w*$/, /\w+$/] : prefixMatch(options);
+
+    let token = context.matchBefore(match);
+    return token || context.explicit ? { from: token ? token.from : context.pos, options, validFor } : null;
+}
 
 function completeKeyFromTagInfo(context: CompletionContext) {
     if (Object.keys(taginfo).length == 0) return;

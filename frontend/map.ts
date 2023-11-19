@@ -104,7 +104,6 @@ map.on("style.load", () => {
         function openContextMenu(e: MapLayerEventType['contextmenu'] & Object) {
             const f = e.features[0];
 
-            // TODO if f.osm
             if (f.properties.osm_type == 'node' && f.properties.__way_id) {
                 const feats = map.querySourceFeatures('OverpassAPI', { filter: ['==', 'osm_id', f.properties.__way_id] });
                 if (feats.length == 0) return;

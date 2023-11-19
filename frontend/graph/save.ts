@@ -32,6 +32,7 @@ type SerializedNode = {
 export function serializeGraph(): {
     nodes: SerializedNode[],
     connections: ReturnType<typeof editor.getConnections>
+    version: string,
 } {
     const nodes: SerializedNode[] = JSON.parse(JSON.stringify(editor.getNodes()));
 
@@ -56,6 +57,7 @@ export function serializeGraph(): {
     return {
         nodes,
         connections: editor.getConnections(),
+        version: '1',
     };
 }
 
@@ -78,88 +80,98 @@ export function saveGraph() {
     window.localStorage.setItem('node-graph', JSON.stringify(serialized));
 }
 
-// TODO this needs to be more resilient to changes
-// TODO we should at least store a version number, and use the default graph if version number doesnt match
 async function loadGraph() {
     let nodeGraph = window.localStorage.getItem('node-graph');
-    // nodeGraph = null;
+
     if (nodeGraph == null) {
         await createDefaultGraph();
-    } else {
-        const data: ReturnType<typeof serializeGraph> = JSON.parse(nodeGraph);
 
-        const selectedNode = data.nodes.find((n: any) => n.selected);
-        const selectedIsOql = selectedNode?.label === 'Overpass QL';
+        setTimeout(zoomToNodes, 10);
+        loading = false;
+        return;
+    }
 
-        for (const { id, label, inputs, outputs, controls, position, selected, type } of data.nodes) {
-            const node = new ClassicPreset.Node(label) as Node;
-            node.type = type;
-            node.id = id;
-            Object.entries(inputs).forEach(([key, input]: [string, any]) => {
-                const socket = new ClassicPreset.Socket(input.socket.name);
-                const inp = new ClassicPreset.Input(socket, input.label);
+    const data: ReturnType<typeof serializeGraph> = JSON.parse(nodeGraph);
 
-                inp.id = input.id;
+    if (data.version !== '1') {
+        await createDefaultGraph();
 
-                node.addInput(key, input);
-            });
-            Object.entries(outputs).forEach(([key, output]: [string, any]) => {
-                const socket = new ClassicPreset.Socket(output.socket.name);
-                const out = new ClassicPreset.Output(socket, output.label);
+        setTimeout(zoomToNodes, 10);
+        loading = false;
+        return;
+    }
 
-                out.id = output.id;
+    const selectedNode = data.nodes.find((n: any) => n.selected);
+    const selectedIsOql = selectedNode?.label === 'Overpass QL';
 
-                node.addOutput(key, out);
-            });
+    for (const { id, label, inputs, outputs, controls, position, selected, type } of data.nodes) {
+        const node = new ClassicPreset.Node(label) as Node;
+        node.type = type;
+        node.id = id;
+        Object.entries(inputs).forEach(([key, input]: [string, any]) => {
+            const socket = new ClassicPreset.Socket(input.socket.name);
+            const inp = new ClassicPreset.Input(socket, input.label);
 
-            if (label == "Overpass QL") {
-                const name = controls.name.value as string;
-                const query = controls.query.value as string;
-                const tab = addTab(node.id, name, selected || !selectedIsOql, () => {
-                    nodeSelector.select(node.id, false);
-                }, saveGraph, query);
+            inp.id = input.id;
 
-                node.addControl("name", new Control("text", {
-                    initial: name,
-                    label: controls.name.label,
-                    tooltip: controls.name.tooltip,
-                    change(value) {
-                        tab.innerHTML = `<p>${value}</p>`;
-                    }
-                }));
-                node.addControl("timeout", new Control("number", {
-                    initial: controls.timeout?.value ?? 30,
-                    properties: controls.timeout?.properties,
-                    label: controls.timeout.label,
-                    tooltip: controls.timeout.tooltip,
-                }));
-            } else {
-                Object.entries(controls).forEach(
-                    ([key, control]: any) => {
-                        if (!control) return;
+            node.addInput(key, input);
+        });
+        Object.entries(outputs).forEach(([key, output]: [string, any]) => {
+            const socket = new ClassicPreset.Socket(output.socket.name);
+            const out = new ClassicPreset.Output(socket, output.label);
 
-                        const ctrl = new Control(control.type, {
-                            initial: control.value,
-                            readonly: control.readonly,
-                            properties: control.properties,
-                            label: control.label,
-                            tooltip: control.tooltip,
-                        });
-                        node.addControl(key, ctrl);
-                    }
-                );
-            }
+            out.id = output.id;
 
-            await editor.addNode(node);
-            await area.translate(node.id, position);
-            if (selected) {
+            node.addOutput(key, out);
+        });
+
+        if (label == "Overpass QL") {
+            const name = controls.name.value as string;
+            const query = controls.query.value as string;
+            const tab = addTab(node.id, name, selected || !selectedIsOql, () => {
                 nodeSelector.select(node.id, false);
-            }
+            }, saveGraph, query);
+
+            node.addControl("name", new Control("text", {
+                initial: name,
+                label: controls.name.label,
+                tooltip: controls.name.tooltip,
+                change(value) {
+                    tab.innerHTML = `<p>${value}</p>`;
+                }
+            }));
+            node.addControl("timeout", new Control("number", {
+                initial: controls.timeout?.value ?? 30,
+                properties: controls.timeout?.properties,
+                label: controls.timeout.label,
+                tooltip: controls.timeout.tooltip,
+            }));
+        } else {
+            Object.entries(controls).forEach(
+                ([key, control]: any) => {
+                    if (!control) return;
+
+                    const ctrl = new Control(control.type, {
+                        initial: control.value,
+                        readonly: control.readonly,
+                        properties: control.properties,
+                        label: control.label,
+                        tooltip: control.tooltip,
+                    });
+                    node.addControl(key, ctrl);
+                }
+            );
         }
 
-        for (const conn of data.connections) {
-            await editor.addConnection(conn);
+        await editor.addNode(node);
+        await area.translate(node.id, position);
+        if (selected) {
+            nodeSelector.select(node.id, false);
         }
+    }
+
+    for (const conn of data.connections) {
+        await editor.addConnection(conn);
     }
 
     setTimeout(zoomToNodes, 10);

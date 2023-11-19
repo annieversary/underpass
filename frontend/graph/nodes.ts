@@ -57,29 +57,35 @@ export class Control<T extends 'text' | 'number', N = T extends 'text' ? string 
 
 
 
-export const nodeList: [key: string, factory: () => ClassicPreset.Node][] = [
+export const nodeList: [key: string, factory: () => Node][] = [
     ["Overpass QL", () => oqlNode(true)],
     ["Union", union],
     ["Road Angle Filter", roadAngleFilter],
     ["Road Length Filter", roadLengthFilter],
+
+    ["Query", query],
 ];
 
 
-const socket = new ClassicPreset.Socket("socket");
+const geojsonSocket = new ClassicPreset.Socket("geojson");
+const querySocket = new ClassicPreset.Socket("query");
 
-export function oqlNode(selected: boolean): ClassicPreset.Node {
-    const nodeA = new ClassicPreset.Node("Overpass QL");
-    nodeA.addOutput("out", new ClassicPreset.Output(socket));
+export type Node = ClassicPreset.Node & { type: "query" | "geojson" };
+
+export function oqlNode(selected: boolean): Node {
+    const node = new ClassicPreset.Node("Overpass QL") as Node;
+    node.type = "geojson";
+    node.addOutput("out", new ClassicPreset.Output(geojsonSocket));
 
     const codeBlockCount = editor.getNodes().filter(n => n.label == "Overpass QL").length + 1;
 
     const name = `OQL Block ${codeBlockCount}`;
-    const tab = addTab(nodeA.id, name, selected, () => {
-        nodeSelector.select(nodeA.id, false);
+    const tab = addTab(node.id, name, selected, () => {
+        nodeSelector.select(node.id, false);
     }, saveGraph);
 
 
-    nodeA.addControl("name", new Control("text", {
+    node.addControl("name", new Control("text", {
         initial: name,
         label: 'name',
         tooltip: 'used to distinguish this Overpass QL block from others',
@@ -87,7 +93,7 @@ export function oqlNode(selected: boolean): ClassicPreset.Node {
             tab.innerHTML = `<p>${value}</p>`;
         }
     }));
-    nodeA.addControl("timeout", new Control("number", {
+    node.addControl("timeout", new Control("number", {
         initial: 30,
         label: 'timeout',
         tooltip: 'timeout value to use for the Overpass API on this Overpass QL block',
@@ -97,14 +103,15 @@ export function oqlNode(selected: boolean): ClassicPreset.Node {
         }
     }));
 
-    return nodeA;
+    return node;
 }
 
-export function roadAngleFilter(): ClassicPreset.Node {
-    const nodeC = new ClassicPreset.Node("Road Angle Filter");
-    nodeC.addInput("in", new ClassicPreset.Input(socket));
-    nodeC.addOutput("out", new ClassicPreset.Output(socket));
-    nodeC.addControl("min", new Control("number", {
+export function roadAngleFilter(): Node {
+    const node = new ClassicPreset.Node("Road Angle Filter") as Node;
+    node.type = "geojson";
+    node.addInput("in", new ClassicPreset.Input(geojsonSocket));
+    node.addOutput("out", new ClassicPreset.Output(geojsonSocket));
+    node.addControl("min", new Control("number", {
         initial: 30.00,
         label: 'min',
         properties: {
@@ -112,7 +119,7 @@ export function roadAngleFilter(): ClassicPreset.Node {
             max: 90,
         }
     }));
-    nodeC.addControl("max", new Control("number", {
+    node.addControl("max", new Control("number", {
         initial: 35.0,
         label: 'max',
         properties: {
@@ -120,46 +127,56 @@ export function roadAngleFilter(): ClassicPreset.Node {
             max: 90,
         }
     }));
-    return nodeC;
+    return node;
 }
 
-export function roadLengthFilter(): ClassicPreset.Node {
-    const nodeC = new ClassicPreset.Node("Road Length Filter");
-    nodeC.addInput("in", new ClassicPreset.Input(socket));
-    nodeC.addOutput("out", new ClassicPreset.Output(socket));
-    nodeC.addControl("min", new Control("number", {
+export function roadLengthFilter(): Node {
+    const node = new ClassicPreset.Node("Road Length Filter") as Node;
+    node.type = "geojson";
+    node.addInput("in", new ClassicPreset.Input(geojsonSocket));
+    node.addOutput("out", new ClassicPreset.Output(geojsonSocket));
+    node.addControl("min", new Control("number", {
         initial: 30.00,
         label: 'min',
         properties: {
             min: 0.0,
         }
     }));
-    nodeC.addControl("max", new Control("number", {
+    node.addControl("max", new Control("number", {
         initial: 35.0,
         label: 'max',
         properties: {
             min: 0.0,
         }
     }));
-    nodeC.addControl("tolerance", new Control("number", {
+    node.addControl("tolerance", new Control("number", {
         initial: 10.0,
         properties: {
             min: 0.0,
         }
     }));
-    return nodeC;
+    return node;
 }
 
-export function map(): ClassicPreset.Node {
-    const nodeB = new ClassicPreset.Node("Map");
-    nodeB.addInput("in", new ClassicPreset.Input(socket));
-    return nodeB;
+export function map(): Node {
+    const node = new ClassicPreset.Node("Map") as Node;
+    node.type = "geojson";
+    node.addInput("in", new ClassicPreset.Input(geojsonSocket));
+    return node;
 }
 
-export function union(): ClassicPreset.Node {
-    const node = new ClassicPreset.Node("Union");
-    node.addInput("a", new ClassicPreset.Input(socket));
-    node.addInput("b", new ClassicPreset.Input(socket));
-    node.addOutput("out", new ClassicPreset.Output(socket));
+export function union(): Node {
+    const node = new ClassicPreset.Node("Union") as Node;
+    node.type = "geojson";
+    node.addInput("a", new ClassicPreset.Input(geojsonSocket));
+    node.addInput("b", new ClassicPreset.Input(geojsonSocket));
+    node.addOutput("out", new ClassicPreset.Output(geojsonSocket));
+    return node;
+}
+
+export function query(): Node {
+    const node = new ClassicPreset.Node("Query") as Node;
+    node.type = "query";
+    node.addOutput("out", new ClassicPreset.Output(querySocket));
     return node;
 }

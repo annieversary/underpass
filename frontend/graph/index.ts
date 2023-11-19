@@ -3,8 +3,9 @@ import { openModal } from '../modal';
 import { processedQueries } from '../index';
 
 import { saveGraph, saveEvents } from './save';
-import { nodeList, } from './nodes';
+import { nodeList, Node } from './nodes';
 import { Control as ControlComponent } from './Control';
+import { StyledNode } from './Node';
 
 import './style.css';
 
@@ -12,14 +13,14 @@ import { NodeEditor, GetSchemes, ClassicPreset, } from "rete";
 import { createRoot } from "react-dom/client";
 import { AreaPlugin, AreaExtensions } from "rete-area-plugin";
 import { ReactPlugin, Presets, ReactArea2D } from "rete-react-plugin";
-import { ConnectionPlugin, Presets as ConnectionPresets } from "rete-connection-plugin"
+import { ConnectionPlugin, ClassicFlow, getSourceTarget } from "rete-connection-plugin"
 import { ContextMenuExtra, ContextMenuPlugin } from "rete-context-menu-plugin";
 import { ItemsCollection } from 'rete-context-menu-plugin/_types/types';
 
 const container = document.querySelector<HTMLDivElement>('#graph-container');
 
-type Schemes = GetSchemes<
-    ClassicPreset.Node,
+export type Schemes = GetSchemes<
+    Node,
     ClassicPreset.Connection<ClassicPreset.Node, ClassicPreset.Node>
 >;
 
@@ -30,14 +31,36 @@ export const area = new AreaPlugin<Schemes, AreaExtra>(container);
 const render = new ReactPlugin<Schemes, AreaExtra>({ createRoot });
 render.addPreset(Presets.classic.setup({
     customize: {
-        control: () => ControlComponent
+        control: () => ControlComponent,
+        node: () => StyledNode
     }
 }));
 editor.use(area);
 area.use(render);
 
 const connection = new ConnectionPlugin<Schemes, AreaExtra>();
-connection.addPreset(ConnectionPresets.classic.setup())
+// connection.addPreset(ConnectionPresets.classic.setup())
+connection.addPreset(() => new ClassicFlow({
+    makeConnection(from, to, context) {
+        const [source, target] = getSourceTarget(from, to) || [null, null];
+
+        // this is not great cause it still disconnects existing connections
+        if ((source as any).payload.name != (target as any).payload.name) return false;
+
+        const { editor } = context;
+        if (source && target) {
+            editor.addConnection(
+                new ClassicPreset.Connection(
+                    editor.getNode(source.nodeId),
+                    source.key,
+                    editor.getNode(target.nodeId),
+                    target.key
+                ) as any
+            );
+            return true; // ensure that the connection has been successfully added
+        }
+    }
+}))
 area.use(connection);
 
 export const nodeSelector = AreaExtensions.selectableNodes(area, AreaExtensions.selector(), {

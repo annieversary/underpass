@@ -1,7 +1,7 @@
 import { addTab, codeEditorMap } from '../codeEditor/index';
 
 import { editor, nodeSelector, area, zoomToNodes } from './index';
-import { oqlNode, map, Control, ExtraProperties } from './nodes';
+import { oqlNode, map, Control, ExtraProperties, Node } from './nodes';
 
 import { ClassicPreset, getUID } from "rete";
 
@@ -26,6 +26,7 @@ type SerializedNode = {
         y: number;
     };
     selected: boolean;
+    type: Node["type"]
 };
 
 export function serializeGraph(): {
@@ -77,6 +78,8 @@ export function saveGraph() {
     window.localStorage.setItem('node-graph', JSON.stringify(serialized));
 }
 
+// TODO this needs to be more resilient to changes
+// TODO we should at least store a version number, and use the default graph if version number doesnt match
 async function loadGraph() {
     let nodeGraph = window.localStorage.getItem('node-graph');
     // nodeGraph = null;
@@ -88,8 +91,9 @@ async function loadGraph() {
         const selectedNode = data.nodes.find((n: any) => n.selected);
         const selectedIsOql = selectedNode?.label === 'Overpass QL';
 
-        for (const { id, label, inputs, outputs, controls, position, selected } of data.nodes) {
-            const node = new ClassicPreset.Node(label);
+        for (const { id, label, inputs, outputs, controls, position, selected, type } of data.nodes) {
+            const node = new ClassicPreset.Node(label) as Node;
+            node.type = type;
             node.id = id;
             Object.entries(inputs).forEach(([key, input]: [string, any]) => {
                 const socket = new ClassicPreset.Socket(input.socket.name);
@@ -171,7 +175,7 @@ async function createDefaultGraph() {
     await editor.addNode(codeNode);
     await editor.addNode(mapNode);
 
-    await editor.addConnection(new ClassicPreset.Connection(codeNode, "out", mapNode, "in"));
+    await editor.addConnection(new ClassicPreset.Connection(codeNode, "out", mapNode, "in") as any);
 
     await area.translate(codeNode.id, { x: 50, y: 100 });
     await area.translate(mapNode.id, { x: 500, y: 100 });

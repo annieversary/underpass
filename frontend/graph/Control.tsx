@@ -1,28 +1,35 @@
 import * as React from 'react'
 import styled from 'styled-components'
 
-import { Control as InputControl } from "./nodes";
+import { ControlType, ControlTypeValue, Control as InputControl } from "./nodes";
 
-const Label = styled.label`
+const Label = styled.label <{ type: ControlType }> `
     color: white;
+    ${props => props.type == 'checkbox' && `
+        display:flex;
+        flex-direction:row;
+        justify-content: space-between;
+    `}
 `;
 const Input = styled.input<{ styles?: (props: any) => any, style: any }>`
-  width: 100%;
-  border-radius: 30px;
-  background-color: white;
-  padding: 2px 6px;
-  border: 1px solid #999;
-  font-size: 110%;
-  box-sizing: border-box;
-  ${props => props.style}
-  ${props => props.styles && props.styles(props)}
+    ${props => props.type != 'checkbox' && `
+        width: 100%;
+    `}
+    border-radius: 30px;
+    background-color: white;
+    padding: 2px 6px;
+    border: 1px solid #999;
+    font-size: 110%;
+    box-sizing: border-box;
+    ${props => props.style}
+    ${props => props.styles && props.styles(props)}
 `;
 
 
-export function Control<N extends 'text' | 'number'>(props: { data: InputControl<N>, styles?: () => any }) {
+export function Control<N extends ControlType>(props: { data: InputControl<N>, styles?: () => any }) {
     const properties = props.data.options.properties;
 
-    function isError(val: N extends 'text' ? string : number): boolean {
+    function isError(val: ControlTypeValue<N>): boolean {
         if (properties) {
             if ("min" in properties && typeof val === 'number') {
                 if (val < properties.min) return true;
@@ -48,25 +55,42 @@ export function Control<N extends 'text' | 'number'>(props: { data: InputControl
 
 
     return (
-        <Label title={props.data.tooltip}>
+        <Label title={props.data.tooltip} type={props.data.type} ref={ref}>
             {props.data.label}
             <Input
                 value={value}
                 type={props.data.type}
-                ref={ref}
                 readOnly={props.data.readonly}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                    let val: typeof props.data['value'];
-                    if (e.target.value !== "") {
-                        val = (props.data.type === 'number'
-                            ? +e.target.value
-                            : e.target.value) as typeof props.data['value'];
+                    switch (props.data.type) {
+                        case 'text': {
+                            const val = e.target.value as ControlTypeValue<N>;
+
+                            setError(isError(val));
+                            setValue(val)
+                            props.data.setValue(val)
+                            break;
+                        }
+                        case 'number': {
+                            let val: ControlTypeValue<N>;
+                            if (val !== "") {
+                                val = e.target.value as ControlTypeValue<N>;
+                            }
+
+                            setError(isError(val));
+                            setValue(val)
+                            props.data.setValue(val)
+                            break;
+                        }
+                        case 'checkbox': {
+                            const val = e.target.checked as ControlTypeValue<N>;
+
+                            setError(isError(val));
+                            setValue(val)
+                            props.data.setValue(val)
+                            break;
+                        }
                     }
-
-                    setError(isError(val));
-
-                    setValue(val)
-                    props.data.setValue(val)
                 }}
                 style={error ? { background: "#f76464" } : {}}
                 styles={props.styles}

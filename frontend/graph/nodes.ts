@@ -25,33 +25,39 @@ export type ExtraProperties<N> = N extends number ? {
     max?: number;
 } : {};
 
+
+type ControlTypeMap = {
+    text: string;
+    number: number;
+    checkbox: boolean;
+}
+export type ControlType = keyof ControlTypeMap;
+export type ControlTypeValue<T extends ControlType> = ControlTypeMap[T];
+
 /**
  * The input control class
  * @example new InputControl('text', { readonly: true, initial: 'hello' })
  */
-export class Control<T extends 'text' | 'number', N = T extends 'text' ? string : number> extends ClassicPreset.InputControl<T, N> {
+export class Control<T extends ControlType, N = ControlTypeValue<T>> extends ClassicPreset.Control {
     properties: ExtraProperties<N>;
     label?: string;
     tooltip?: string;
+    value?: N;
+    readonly: boolean;
 
-    /**
-     * @constructor
-     * @param type Type of the control: `text` or `number`
-     * @param options Control options
-     */
     constructor(public type: T, public options?: InputControlOptions<N>) {
-        let origChange = options?.change;
-
-        options = options ?? {};
-        options.change = (value: N) => {
-            if (origChange) origChange(value);
-            saveGraph();
-        }
-
-        super(type, options)
+        super()
+        if (typeof options?.initial !== 'undefined') this.value = options.initial;
+        this.readonly = options?.readonly;
         this.properties = options.properties;
         this.label = options?.label;
         this.tooltip = options?.tooltip;
+    }
+
+    setValue(value?: N) {
+        this.value = value
+        if (this.options?.change) this.options.change(value)
+        saveGraph();
     }
 }
 
@@ -63,7 +69,8 @@ export const nodeList: [key: string, factory: () => Node][] = [
     ["Road Angle Filter", roadAngleFilter],
     ["Road Length Filter", roadLengthFilter],
 
-    ["Query", query],
+    // TODO put this in separate category
+    ["Filter", filter],
 ];
 
 
@@ -75,6 +82,8 @@ export type Node = ClassicPreset.Node & { type: "query" | "geojson" };
 export function oqlNode(selected: boolean): Node {
     const node = new ClassicPreset.Node("Overpass QL") as Node;
     node.type = "geojson";
+
+    node.addInput("query", new ClassicPreset.Input(querySocket));
     node.addOutput("out", new ClassicPreset.Output(geojsonSocket));
 
     const codeBlockCount = editor.getNodes().filter(n => n.label == "Overpass QL").length + 1;
@@ -174,9 +183,31 @@ export function union(): Node {
     return node;
 }
 
-export function query(): Node {
-    const node = new ClassicPreset.Node("Query") as Node;
-    node.type = "query";
+export function filter(): Node {
+    const node = new ClassicPreset.Node('Filter') as Node;
+    node.type = 'query';
     node.addOutput("out", new ClassicPreset.Output(querySocket));
+
+    node.addControl('nodes', new Control('checkbox', {
+        initial: false,
+        label: 'node',
+    }));
+    node.addControl('ways', new Control('checkbox', {
+        initial: false,
+        label: 'ways',
+    }));
+    node.addControl('relations', new Control('checkbox', {
+        initial: false,
+        label: 'relations',
+    }));
+
+    node.addControl('key', new Control('text', {
+        initial: "highway",
+        label: 'key',
+    }));
+    node.addControl('value', new Control('text', {
+        initial: "primary",
+        label: 'value',
+    }));
     return node;
 }

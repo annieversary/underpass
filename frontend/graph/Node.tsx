@@ -25,6 +25,5 @@ export function StyledNode(props: {
     data: Schemes['Node'],
     emit: (props: ReactArea2D<Schemes>) => void;
 }) {
-    console.log(props.data.type);
     return <Presets.classic.Node styles={() => myStyles(props.data.type)} {...props} />;
 }

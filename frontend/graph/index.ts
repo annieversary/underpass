@@ -6,6 +6,7 @@ import { saveGraph, saveEvents } from './save';
 import { nodeList, Node } from './nodes';
 import { Control as ControlComponent } from './Control';
 import { StyledNode } from './Node';
+import { Socket } from './Socket';
 
 import './style.css';
 
@@ -32,7 +33,8 @@ const render = new ReactPlugin<Schemes, AreaExtra>({ createRoot });
 render.addPreset(Presets.classic.setup({
     customize: {
         control: () => ControlComponent,
-        node: () => StyledNode
+        node: () => StyledNode,
+        socket: () => Socket,
     }
 }));
 editor.use(area);

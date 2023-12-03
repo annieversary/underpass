@@ -65,7 +65,7 @@ pub enum GraphNodeInternal {
     },
 
     // geojson nodes
-    #[serde(rename = "Overpass QL")]
+    #[serde(rename = "Overpass")]
     Overpass {
         timeout: Control<u32>,
     },

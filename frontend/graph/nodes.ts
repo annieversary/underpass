@@ -81,9 +81,8 @@ const querySocket = new ClassicPreset.Socket("query");
 
 export type Node = ClassicPreset.Node & { type: "query" | "geojson" };
 
-// TODO rename to Overpass API
 export function oqlNode(): Node {
-    const node = new ClassicPreset.Node("Overpass QL") as Node;
+    const node = new ClassicPreset.Node("Overpass") as Node;
     node.type = "geojson";
 
     node.addInput("query", new ClassicPreset.Input(querySocket));

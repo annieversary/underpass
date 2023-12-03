@@ -44,7 +44,7 @@ pub async fn process_graph(graph: Graph, bbox: Bbox) -> Result<GraphResult, Sear
         memory: Default::default(),
     };
 
-    let collection = np.process_node(prev).await?;
+    let collection = np.process_node(prev).await?.into_features()?;
 
     Ok(GraphResult {
         collection,
@@ -60,7 +60,7 @@ struct NodeProcessor<'a> {
     bbox: Bbox,
     geocode_areas: Vec<GeocodeaArea>,
     processed_queries: HashMap<String, String>,
-    memory: HashMap<String, FeatureCollection>,
+    memory: HashMap<String, NodeOutput>,
 }
 
 impl<'a> NodeProcessor<'a> {
@@ -82,28 +82,59 @@ impl<'a> NodeProcessor<'a> {
     }
 
     #[async_recursion::async_recursion]
-    async fn process_node(&mut self, n: &GraphNode) -> Result<FeatureCollection, SearchError> {
+    async fn process_node(&mut self, n: &GraphNode) -> Result<NodeOutput, SearchError> {
         if let Some(res) = self.memory.get(&n.id) {
             return Ok(res.clone());
         }
 
-        let res: Result<FeatureCollection, SearchError> = match &n.node {
+        let res: Result<NodeOutput, SearchError> = match &n.node {
             GraphNodeInternal::Map {} => unreachable!(),
             GraphNodeInternal::Union {} => {
                 let a_con = self.find_connection(n, Some("a"))?;
                 let a_prev = self.get_node(&a_con.source)?;
-                let mut a_collection = self.process_node(a_prev).await?;
+                let mut a_collection = self.process_node(a_prev).await?.into_features()?;
 
                 let b_con = self.find_connection(n, Some("b"))?;
                 let b_prev = self.get_node(&b_con.source)?;
-                let b_collection = self.process_node(b_prev).await?;
+                let b_collection = self.process_node(b_prev).await?.into_features()?;
 
                 a_collection.features.extend(b_collection.features);
-                Ok(a_collection)
+                Ok(a_collection.into())
             }
-            GraphNodeInternal::Oql { query, timeout } => {
+
+            // query nodes
+            GraphNodeInternal::Oql { query } => Ok(query.value.clone().into()),
+            GraphNodeInternal::OsmFilter {
+                nodes,
+                ways,
+                relations,
+                key,
+                value,
+            } => {
+                let f = match (nodes.value, ways.value, relations.value) {
+                    (true, true, true) => "nwr",
+                    (true, true, false) => "nw",
+                    (true, false, true) => "nr",
+                    (false, true, true) => "wr",
+                    (true, false, false) => "node",
+                    (false, true, false) => "way",
+                    (false, false, true) => "relation",
+                    (false, false, false) => "nwr",
+                };
+
+                let round = "{{bbox}}";
+                Ok(format!("{f}[{}={}]({round});", key.value, value.value).into())
+            }
+
+            // geojson nodes
+            GraphNodeInternal::Overpass { timeout } => {
+                // TODO make function to abstract this
+                let query_con = self.find_connection(n, Some("query"))?;
+                let query_node = self.get_node(&query_con.source)?;
+                let query = self.process_node(query_node).await?.into_query()?;
+
                 let (query, found_areas) =
-                    preprocess_query(&query.value, &self.bbox, timeout.value, OsmNominatim).await?;
+                    preprocess_query(&query, &self.bbox, timeout.value, OsmNominatim).await?;
 
                 let client = reqwest::Client::new();
                 let res = client
@@ -118,7 +149,7 @@ impl<'a> NodeProcessor<'a> {
                     self.geocode_areas.extend(found_areas);
                     self.processed_queries.insert(n.id.clone(), query);
 
-                    Ok(osm_to_geojson(osm))
+                    Ok(osm_to_geojson(osm).into())
                 } else {
                     let res = res.text().await?;
                     Err(GraphError::OqlSyntax {
@@ -133,10 +164,10 @@ impl<'a> NodeProcessor<'a> {
                 let con = self.find_connection(n, None)?;
                 let prev = self.get_node(&con.source)?;
 
-                let collection = self.process_node(prev).await?;
+                let collection = self.process_node(prev).await?.into_features()?;
                 let res =
                     nodes::road_angle_filter::filter(collection, min.value, max.value, &n.id)?;
-                Ok(res)
+                Ok(res.into())
             }
             GraphNodeInternal::RoadLengthFilter {
                 min,
@@ -146,7 +177,7 @@ impl<'a> NodeProcessor<'a> {
                 let con = self.find_connection(n, None)?;
                 let prev = self.get_node(&con.source)?;
 
-                let collection = self.process_node(prev).await?;
+                let collection = self.process_node(prev).await?.into_features()?;
                 let res = nodes::road_length_filter::filter(
                     collection,
                     min.value,
@@ -154,7 +185,7 @@ impl<'a> NodeProcessor<'a> {
                     tolerance.value,
                     &n.id,
                 )?;
-                Ok(res)
+                Ok(res.into())
             }
             // not actually implemented
             GraphNodeInternal::InViewOf {} => {
@@ -177,5 +208,43 @@ impl<'a> NodeProcessor<'a> {
         self.memory.insert(n.id.clone(), res.clone());
 
         Ok(res)
+    }
+}
+
+#[derive(Clone)]
+enum NodeOutput {
+    Features(FeatureCollection),
+    Query(String),
+}
+impl NodeOutput {
+    fn into_features(self) -> Result<FeatureCollection, GraphError> {
+        if let NodeOutput::Features(val) = self {
+            Ok(val)
+        } else {
+            Err(GraphError::WrongInputType {
+                got: "query".into(),
+                expected: "geojson".into(),
+            })
+        }
+    }
+    fn into_query(self) -> Result<String, GraphError> {
+        if let NodeOutput::Query(val) = self {
+            Ok(val)
+        } else {
+            Err(GraphError::WrongInputType {
+                got: "geojson".into(),
+                expected: "query".into(),
+            })
+        }
+    }
+}
+impl From<FeatureCollection> for NodeOutput {
+    fn from(value: FeatureCollection) -> Self {
+        Self::Features(value)
+    }
+}
+impl From<String> for NodeOutput {
+    fn from(value: String) -> Self {
+        Self::Query(value)
     }
 }

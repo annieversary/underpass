@@ -48,9 +48,25 @@ pub struct GraphNode {
 #[serde(tag = "label", content = "controls")]
 pub enum GraphNodeInternal {
     Map {},
-    #[serde(rename = "Overpass QL")]
+
+    // query nodes
+    #[serde(rename = "OQL Code")]
     Oql {
         query: Control<String>,
+    },
+    #[serde(rename = "Osm Filter")]
+    OsmFilter {
+        nodes: Control<bool>,
+        ways: Control<bool>,
+        relations: Control<bool>,
+
+        key: Control<String>,
+        value: Control<String>,
+    },
+
+    // geojson nodes
+    #[serde(rename = "Overpass QL")]
+    Overpass {
         timeout: Control<u32>,
     },
     #[serde(rename = "Road Angle Filter")]
@@ -107,4 +123,6 @@ pub enum GraphError {
     RoadAngle { message: String, node_id: String },
     #[error("Road length: {message}")]
     RoadLength { message: String, node_id: String },
+    #[error("Node has wrong input type {got}, expected {expected}")]
+    WrongInputType { got: String, expected: String },
 }

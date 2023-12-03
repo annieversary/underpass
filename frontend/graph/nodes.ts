@@ -63,14 +63,16 @@ export class Control<T extends ControlType, N = ControlTypeValue<T>> extends Cla
 
 
 
+// TODO make this an object, and make a separate thing that's the context menu
 export const nodeList: [key: string, factory: () => Node][] = [
-    ["Overpass QL", () => oqlNode(true)],
+    ["Overpass", oqlNode],
     ["Union", union],
     ["Road Angle Filter", roadAngleFilter],
     ["Road Length Filter", roadLengthFilter],
 
     // TODO put this in separate category
     ["Filter", filter],
+    ["OQL Code", () => oqlCode(true)],
 ];
 
 
@@ -79,29 +81,14 @@ const querySocket = new ClassicPreset.Socket("query");
 
 export type Node = ClassicPreset.Node & { type: "query" | "geojson" };
 
-export function oqlNode(selected: boolean): Node {
+// TODO rename to Overpass API
+export function oqlNode(): Node {
     const node = new ClassicPreset.Node("Overpass QL") as Node;
     node.type = "geojson";
 
     node.addInput("query", new ClassicPreset.Input(querySocket));
     node.addOutput("out", new ClassicPreset.Output(geojsonSocket));
 
-    const codeBlockCount = editor.getNodes().filter(n => n.label == "Overpass QL").length + 1;
-
-    const name = `OQL Block ${codeBlockCount}`;
-    const tab = addTab(node.id, name, selected, () => {
-        nodeSelector.select(node.id, false);
-    }, saveGraph);
-
-
-    node.addControl("name", new Control("text", {
-        initial: name,
-        label: 'name',
-        tooltip: 'used to distinguish this Overpass QL block from others',
-        change(value) {
-            tab.innerHTML = `<p>${value}</p>`;
-        }
-    }));
     node.addControl("timeout", new Control("number", {
         initial: 30,
         label: 'timeout',
@@ -183,8 +170,32 @@ export function union(): Node {
     return node;
 }
 
+export function oqlCode(selected: boolean): Node {
+    const node = new ClassicPreset.Node('OQL Code') as Node;
+    node.type = 'query';
+    node.addOutput("out", new ClassicPreset.Output(querySocket));
+
+    const codeBlockCount = editor.getNodes().filter(n => n.label == "Overpass QL").length + 1;
+
+    const name = `OQL Block ${codeBlockCount}`;
+    const tab = addTab(node.id, name, selected, () => {
+        nodeSelector.select(node.id, false);
+    }, saveGraph);
+
+    node.addControl("name", new Control("text", {
+        initial: name,
+        label: 'name',
+        tooltip: 'used to distinguish this Overpass QL block from others',
+        change(value) {
+            tab.innerHTML = `<p>${value}</p>`;
+        }
+    }));
+
+    return node;
+}
+
 export function filter(): Node {
-    const node = new ClassicPreset.Node('Filter') as Node;
+    const node = new ClassicPreset.Node('Osm Filter') as Node;
     node.type = 'query';
     node.addOutput("out", new ClassicPreset.Output(querySocket));
 

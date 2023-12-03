@@ -43,11 +43,13 @@ area.use(render);
 const connection = new ConnectionPlugin<Schemes, AreaExtra>();
 // connection.addPreset(ConnectionPresets.classic.setup())
 connection.addPreset(() => new ClassicFlow({
-    makeConnection(from, to, context) {
+    canMakeConnection(from, to) {
         const [source, target] = getSourceTarget(from, to) || [null, null];
 
-        // this is not great cause it still disconnects existing connections
-        if ((source as any).payload.name != (target as any).payload.name) return false;
+        return source && target && (source as any).payload.name == (target as any).payload.name;
+    },
+    makeConnection(from, to, context) {
+        const [source, target] = getSourceTarget(from, to) || [null, null];
 
         const { editor } = context;
         if (source && target) {
@@ -62,7 +64,7 @@ connection.addPreset(() => new ClassicFlow({
             return true; // ensure that the connection has been successfully added
         }
     }
-}))
+}));
 area.use(connection);
 
 export const nodeSelector = AreaExtensions.selectableNodes(area, AreaExtensions.selector(), {

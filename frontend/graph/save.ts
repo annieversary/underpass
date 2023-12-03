@@ -1,7 +1,7 @@
 import { addTab, codeEditorMap } from '../codeEditor/index';
 
 import { editor, nodeSelector, area, zoomToNodes } from './index';
-import { oqlNode, map, Control, ExtraProperties, Node } from './nodes';
+import { oqlNode, map, Control, ExtraProperties, Node, oqlCode } from './nodes';
 
 import { ClassicPreset, getUID } from "rete";
 
@@ -41,7 +41,7 @@ export function serializeGraph(): {
         nodes[i].position = area.nodeViews.get(nodes[i].id).position;
 
         // add query as a control if this is an oql node
-        if (nodes[i].label == "Overpass QL") {
+        if (nodes[i].label == "OQL Code") {
             nodes[i].controls.query = {
                 id: getUID(),
                 type: 'text',
@@ -102,7 +102,7 @@ async function loadGraph() {
     }
 
     const selectedNode = data.nodes.find((n: any) => n.selected);
-    const selectedIsOql = selectedNode?.label === 'Overpass QL';
+    const selectedIsOql = selectedNode?.label === 'OQL Code';
 
     for (const { id, label, inputs, outputs, controls, position, selected, type } of data.nodes) {
         const node = new ClassicPreset.Node(label) as Node;
@@ -125,7 +125,7 @@ async function loadGraph() {
             node.addOutput(key, out);
         });
 
-        if (label == "Overpass QL") {
+        if (label == "OQL Code") {
             const name = controls.name.value as string;
             const query = controls.query.value as string;
             const tab = addTab(node.id, name, selected || !selectedIsOql, () => {
@@ -139,12 +139,6 @@ async function loadGraph() {
                 change(value) {
                     tab.innerHTML = `<p>${value}</p>`;
                 }
-            }));
-            node.addControl("timeout", new Control("number", {
-                initial: controls.timeout?.value ?? 30,
-                properties: controls.timeout?.properties,
-                label: controls.timeout.label,
-                tooltip: controls.timeout.tooltip,
             }));
         } else {
             Object.entries(controls).forEach(
@@ -181,14 +175,18 @@ async function loadGraph() {
 loadGraph();
 
 async function createDefaultGraph() {
-    const codeNode = oqlNode(true);
+    const oql = oqlCode(true);
+    const overpass = oqlNode();
     const mapNode = map();
 
-    await editor.addNode(codeNode);
+    await editor.addNode(oql);
+    await editor.addNode(overpass);
     await editor.addNode(mapNode);
 
-    await editor.addConnection(new ClassicPreset.Connection(codeNode, "out", mapNode, "in") as any);
+    await editor.addConnection(new ClassicPreset.Connection(oql, "out", overpass, "query") as any);
+    await editor.addConnection(new ClassicPreset.Connection(overpass, "out", mapNode, "in") as any);
 
-    await area.translate(codeNode.id, { x: 50, y: 100 });
-    await area.translate(mapNode.id, { x: 500, y: 100 });
+    await area.translate(oql.id, { x: 50, y: 100 });
+    await area.translate(overpass.id, { x: 300, y: 100 });
+    await area.translate(mapNode.id, { x: 600, y: 100 });
 }

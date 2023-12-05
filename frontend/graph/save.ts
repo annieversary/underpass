@@ -5,6 +5,8 @@ import { oqlNode, map, Control, ExtraProperties, Node, oqlCode } from './nodes';
 
 import { ClassicPreset, getUID } from "rete";
 
+const currentVersion = '2';
+
 type SerializedNode = {
     id: string;
     label: string;
@@ -57,7 +59,7 @@ export function serializeGraph(): {
     return {
         nodes,
         connections: editor.getConnections(),
-        version: '1',
+        version: currentVersion,
     };
 }
 
@@ -93,7 +95,7 @@ async function loadGraph() {
 
     const data: ReturnType<typeof serializeGraph> = JSON.parse(nodeGraph);
 
-    if (data.version !== '1') {
+    if (data.version !== currentVersion) {
         await createDefaultGraph();
 
         setTimeout(zoomToNodes, 10);

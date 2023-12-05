@@ -146,7 +146,7 @@ const contextMenu = new ContextMenuPlugin<Schemes>({
 
             const nodeId = context.id;
             const query = processedQueries[nodeId];
-            if (context.label == 'Overpass QL' && query) {
+            if (context.label == 'OQL Code' && query) {
                 list.push({
                     label: 'View query',
                     key: 'view-query',
@@ -195,7 +195,7 @@ area.addPipe(context => {
 
     // delete tab and code editor when deleting oql nodes
     if (context.type == 'noderemoved') {
-        if (context.data.label == "Overpass QL") {
+        if (context.data.label == 'OQL Code') {
             removeTab(context.data.id);
         }
     }

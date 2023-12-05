@@ -62,17 +62,18 @@ export class Control<T extends ControlType, N = ControlTypeValue<T>> extends Cla
 }
 
 
+export type NodeList = [key: string, factory: () => Node][];
 
-// TODO make this an object, and make a separate thing that's the context menu
-export const nodeList: [key: string, factory: () => Node][] = [
+export const geojsonNodeList: NodeList = [
     ["Overpass", oqlNode],
     ["Union", union],
     ["Road Angle Filter", roadAngleFilter],
     ["Road Length Filter", roadLengthFilter],
+];
 
-    // TODO put this in separate category
+export const queryNodeList: NodeList = [
+    ["Code", () => oqlCode(true)],
     ["Filter", filter],
-    ["OQL Code", () => oqlCode(true)],
 ];
 
 

@@ -3,7 +3,7 @@ import { openModal } from '../modal';
 import { processedQueries } from '../index';
 
 import { saveGraph, saveEvents } from './save';
-import { nodeList, Node } from './nodes';
+import { Node, geojsonNodeList, queryNodeList, NodeList } from './nodes';
 import { Control as ControlComponent } from './Control';
 import { StyledNode } from './Node';
 import { Socket } from './Socket';
@@ -79,7 +79,7 @@ AreaExtensions.simpleNodesOrder(area);
 const contextMenu = new ContextMenuPlugin<Schemes>({
     items(context, _plugin): ItemsCollection {
         if (context === 'root') {
-            const nodeGenerators = nodeList.map(([label, factory], i) => {
+            const generators = (nodeList: NodeList) => nodeList.map(([label, factory], i) => {
                 if (typeof factory != 'function') return;
                 return {
                     label,
@@ -95,9 +95,16 @@ const contextMenu = new ContextMenuPlugin<Schemes>({
             return {
                 searchBar: true,
                 list: [
-                    ...nodeGenerators,
                     {
-                        label: 'Tools', key: '1', handler: () => null,
+                        label: 'GeoJson', key: '1', handler: () => null,
+                        subitems: generators(geojsonNodeList)
+                    },
+                    {
+                        label: 'Query', key: '2', handler: () => null,
+                        subitems: generators(queryNodeList)
+                    },
+                    {
+                        label: 'Tools', key: '3', handler: () => null,
                         subitems: [
                             {
                                 label: 'Clear graph',
@@ -170,7 +177,7 @@ const contextMenu = new ContextMenuPlugin<Schemes>({
     }
 });
 
-render.addPreset(Presets.contextMenu.setup());
+render.addPreset(Presets.contextMenu.setup({ delay: 0 }));
 area.use(contextMenu);
 
 

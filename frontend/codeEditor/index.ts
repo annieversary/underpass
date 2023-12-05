@@ -88,7 +88,9 @@ function newEditor(parent: HTMLDivElement, query: string, saveGraph: () => void,
             ViewPlugin.fromClass(class {
                 update(_update: ViewUpdate) {
                     saveGraph();
-                    delete processedQueries[id];
+                    if (processedQueries) {
+                        delete processedQueries[id];
+                    }
                 }
             }),
             tooltip(),

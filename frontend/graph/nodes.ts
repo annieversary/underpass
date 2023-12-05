@@ -23,6 +23,8 @@ export type InputControlOptions<N> = {
 export type ExtraProperties<N> = N extends number ? {
     min?: number;
     max?: number;
+    minlength?: number;
+    maxlength?: number;
 } : {};
 
 
@@ -215,6 +217,9 @@ export function filter(): Node {
     node.addControl('key', new Control('text', {
         initial: "highway",
         label: 'key',
+        properties: {
+            minlength: 1
+        }
     }));
     node.addControl('value', new Control('text', {
         initial: "primary",

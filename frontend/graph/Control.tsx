@@ -37,15 +37,20 @@ export function Control<N extends ControlType>(props: { data: InputControl<N>, s
             if ("max" in properties && typeof val === 'number') {
                 if (properties.max < val) return true;
             }
+            if ("minlength" in properties && typeof val === 'string') {
+                if (val.length < properties.minlength) return true;
+            }
+            if ("maxlength" in properties && typeof val === 'string') {
+                if (properties.max < val.length) return true;
+            }
         }
         return false;
     }
 
-
     const [value, setValue] = React.useState(props.data.value)
     const ref = React.useRef(null)
 
-    const [error, setError] = React.useState(isError(props.data.value));
+    const [error, setError] = React.useState(isError(value));
 
     useNoDrag(ref)
 
@@ -74,7 +79,7 @@ export function Control<N extends ControlType>(props: { data: InputControl<N>, s
                         case 'number': {
                             let val: ControlTypeValue<N>;
                             if (val !== "") {
-                                val = e.target.value as ControlTypeValue<N>;
+                                val = +e.target.value as ControlTypeValue<N>;
                             }
 
                             setError(isError(val));

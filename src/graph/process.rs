@@ -123,7 +123,11 @@ impl<'a> NodeProcessor<'a> {
                 };
 
                 let round = "{{bbox}}";
-                Ok(format!("{f}[{}={}]({round});", key.value, value.value).into())
+                if value.value.is_empty() {
+                    Ok(format!("{f}[{}]({round});", key.value).into())
+                } else {
+                    Ok(format!("{f}[{}={}]({round});", key.value, value.value).into())
+                }
             }
 
             // geojson nodes

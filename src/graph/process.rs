@@ -64,21 +64,26 @@ struct NodeProcessor<'a> {
 }
 
 impl<'a> NodeProcessor<'a> {
-    fn find_connection(
-        &self,
-        n: &GraphNode,
-        target: Option<&str>,
-    ) -> Result<&GraphConnection, GraphError> {
+    /// find a connection that targets `n` on the `target` input
+    fn find_connection(&self, n: &GraphNode, target: &str) -> Result<&GraphConnection, GraphError> {
         self.connections
             .iter()
-            .find(|c| c.target == n.id && target.map(|t| t == c.target_input).unwrap_or(true))
+            .find(|c| c.target == n.id && target == c.target_input)
             .ok_or_else(|| GraphError::InputMissing {
                 node_id: n.id.clone(),
             })
     }
 
+    /// get node by id
     fn get_node<'b>(&'b self, id: &'_ str) -> Result<&'b &'a GraphNode, GraphError> {
         self.nodes.get(id).ok_or(GraphError::ConnectionNodeMissing)
+    }
+
+    /// get and compute the node connected to input `name`
+    async fn get_input(&mut self, node: &GraphNode, name: &str) -> Result<NodeOutput, SearchError> {
+        let con = self.find_connection(node, name)?;
+        let prev = self.get_node(&con.source)?;
+        self.process_node(prev).await
     }
 
     #[async_recursion::async_recursion]
@@ -90,13 +95,8 @@ impl<'a> NodeProcessor<'a> {
         let res: Result<NodeOutput, SearchError> = match &n.node {
             GraphNodeInternal::Map {} => unreachable!(),
             GraphNodeInternal::Union {} => {
-                let a_con = self.find_connection(n, Some("a"))?;
-                let a_prev = self.get_node(&a_con.source)?;
-                let mut a_collection = self.process_node(a_prev).await?.into_features()?;
-
-                let b_con = self.find_connection(n, Some("b"))?;
-                let b_prev = self.get_node(&b_con.source)?;
-                let b_collection = self.process_node(b_prev).await?.into_features()?;
+                let mut a_collection = self.get_input(n, "a").await?.into_features()?;
+                let b_collection = self.get_input(n, "b").await?.into_features()?;
 
                 a_collection.features.extend(b_collection.features);
                 Ok(a_collection.into())
@@ -132,10 +132,7 @@ impl<'a> NodeProcessor<'a> {
 
             // geojson nodes
             GraphNodeInternal::Overpass { timeout } => {
-                // TODO make function to abstract this
-                let query_con = self.find_connection(n, Some("query"))?;
-                let query_node = self.get_node(&query_con.source)?;
-                let query = self.process_node(query_node).await?.into_query()?;
+                let query = self.get_input(n, "query").await?.into_query()?;
 
                 let (query, found_areas) =
                     preprocess_query(&query, &self.bbox, timeout.value, OsmNominatim).await?;
@@ -168,10 +165,8 @@ impl<'a> NodeProcessor<'a> {
                 }
             }
             GraphNodeInternal::RoadAngleFilter { min, max } => {
-                let con = self.find_connection(n, None)?;
-                let prev = self.get_node(&con.source)?;
+                let collection = self.get_input(n, "in").await?.into_features()?;
 
-                let collection = self.process_node(prev).await?.into_features()?;
                 let res =
                     nodes::road_angle_filter::filter(collection, min.value, max.value, &n.id)?;
                 Ok(res.into())
@@ -181,10 +176,8 @@ impl<'a> NodeProcessor<'a> {
                 max,
                 tolerance,
             } => {
-                let con = self.find_connection(n, None)?;
-                let prev = self.get_node(&con.source)?;
+                let collection = self.get_input(n, "in").await?.into_features()?;
 
-                let collection = self.process_node(prev).await?.into_features()?;
                 let res = nodes::road_length_filter::filter(
                     collection,
                     min.value,
@@ -196,13 +189,8 @@ impl<'a> NodeProcessor<'a> {
             }
             // not actually implemented
             GraphNodeInternal::InViewOf {} => {
-                let input_con = self.find_connection(n, Some("in"))?;
-                let input_prev = self.get_node(&input_con.source)?;
-                let _input_collection = self.process_node(input_prev).await?;
-
-                let aux_con = self.find_connection(n, Some("aux"))?;
-                let aux_prev = self.get_node(&aux_con.source)?;
-                let _aux_collection = self.process_node(aux_prev).await?;
+                let _input_collection = self.get_input(n, "in").await?.into_features()?;
+                let _aux_collection = self.get_input(n, "aux").await?.into_features()?;
 
                 // TODO filter input_collection by whether it can see the aux_collection
 

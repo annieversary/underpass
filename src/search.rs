@@ -53,8 +53,6 @@ pub struct GeocodeaArea {
 pub enum SearchError {
     #[error("network error")]
     Network(#[from] reqwest::Error),
-    #[error("json parse error")]
-    JsonParse(reqwest::Error),
     #[error("Nominatim: {0}")]
     Nominatim(String),
     #[error("{0}")]

@@ -23,7 +23,7 @@ pub fn osm_to_geojson(osm: Osm) -> FeatureCollection {
     let features = osm
         .elements
         .into_iter()
-        .map(|el| element_to_feature(&el, &node_map, &way_map))
+        .flat_map(|el| element_to_feature(&el, &node_map, &way_map))
         .collect();
 
     FeatureCollection {
@@ -33,14 +33,17 @@ pub fn osm_to_geojson(osm: Osm) -> FeatureCollection {
     }
 }
 
+/// Convert an Osm element to a geojson feature
+///
+/// Returns an option since areas are not converted to geojson
 fn element_to_feature(
     el: &Element,
     node_map: &BTreeMap<u64, Vec<f64>>,
     way_map: &BTreeMap<u64, u64>,
-) -> Feature {
+) -> Option<Feature> {
     let mut feat = Feature {
         id: Some(feature::Id::Number(el.id().into())),
-        geometry: Some(element_to_geometry(el, node_map)),
+        geometry: Some(element_to_geometry(el, node_map)?),
         ..Default::default()
     };
 
@@ -73,26 +76,29 @@ fn element_to_feature(
         feat.properties = Some(obj);
     }
 
-    feat
+    Some(feat)
 }
 
-fn element_to_geometry(el: &Element, node_map: &BTreeMap<u64, Vec<f64>>) -> Geometry {
-    match el {
-        Element::Node(node) => Value::Point(vec![node.lon, node.lat]),
-        Element::Way(way) => Value::LineString(
-            way.nodes
-                .iter()
-                .filter_map(|id| node_map.get(id).cloned())
-                .collect(),
-        ),
-        Element::Relation(rel) => Value::GeometryCollection(
-            rel.members
-                .iter()
-                .map(|el| element_to_geometry(el, node_map))
-                .collect(),
-        ),
-    }
-    .into()
+fn element_to_geometry(el: &Element, node_map: &BTreeMap<u64, Vec<f64>>) -> Option<Geometry> {
+    Some(
+        match el {
+            Element::Node(node) => Value::Point(vec![node.lon, node.lat]),
+            Element::Way(way) => Value::LineString(
+                way.nodes
+                    .iter()
+                    .filter_map(|id| node_map.get(id).cloned())
+                    .collect(),
+            ),
+            Element::Relation(rel) => Value::GeometryCollection(
+                rel.members
+                    .iter()
+                    .flat_map(|el| element_to_geometry(el, node_map))
+                    .collect(),
+            ),
+            Element::Area(_) => return None,
+        }
+        .into(),
+    )
 }
 
 /// The intro stuff we don't care about, besides elements.
@@ -137,6 +143,12 @@ pub struct Relation {
     pub members: Vec<Element>,
 }
 
+#[derive(Debug, PartialEq, Clone, Deserialize)]
+pub struct Area {
+    pub id: u64,
+    pub tags: Option<serde_json::Value>,
+}
+
 /// A generic element, either a node or way.
 #[derive(Debug, PartialEq, Clone, Deserialize)]
 #[serde(tag = "type")]
@@ -145,6 +157,7 @@ pub enum Element {
     Node(Node),
     Way(Way),
     Relation(Relation),
+    Area(Area),
 }
 
 impl Element {
@@ -153,6 +166,7 @@ impl Element {
             Element::Node(n) => n.tags.as_ref(),
             Element::Way(n) => n.tags.as_ref(),
             Element::Relation(n) => n.tags.as_ref(),
+            Element::Area(n) => n.tags.as_ref(),
         }
     }
 
@@ -161,6 +175,7 @@ impl Element {
             Element::Node(n) => n.id,
             Element::Way(n) => n.id,
             Element::Relation(n) => n.id,
+            Element::Area(n) => n.id,
         }
     }
 
@@ -169,6 +184,7 @@ impl Element {
             Element::Node(_) => "node",
             Element::Way(_) => "way",
             Element::Relation(_) => "relation",
+            Element::Area(_) => "area",
         }
     }
 }

@@ -148,7 +148,10 @@ impl<'a> NodeProcessor<'a> {
                     .await?;
 
                 if res.status() == 200 {
-                    let osm: Osm = res.json().await.map_err(SearchError::JsonParse)?;
+                    let osm: Osm = res
+                        .json()
+                        .await
+                        .map_err(|_| GraphError::OverpassJsonError)?;
 
                     self.geocode_areas.extend(found_areas);
                     self.processed_queries.insert(n.id.clone(), query);

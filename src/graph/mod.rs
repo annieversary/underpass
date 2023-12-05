@@ -125,4 +125,6 @@ pub enum GraphError {
     RoadLength { message: String, node_id: String },
     #[error("Node has wrong input type {got}, expected {expected}")]
     WrongInputType { got: String, expected: String },
+    #[error("Error parsing Overpass json")]
+    OverpassJsonError,
 }

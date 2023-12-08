@@ -14,6 +14,7 @@ import { settings, vimCompartment } from '../settings';
 import { oql } from '../oql-parser';
 
 import { tooltip } from './tooltips';
+import { zoomToNodes } from "../graph";
 
 export function addTab(
     id: string,
@@ -23,6 +24,8 @@ export function addTab(
     saveGraph: () => void,
     query: string = settings.tagsShouldHaveQuotes() ? 'way["highway"]({{bbox}});' : 'way[highway]({{bbox}});',
 ): HTMLDivElement {
+    const isFirstEditor = Object.keys(codeEditorMap).length == 0;
+
     // create code editor
     const editor = document.createElement('div');
     editor.classList.add('code-editor')
@@ -55,11 +58,16 @@ export function addTab(
 
     if (selected) tab.onclick(new MouseEvent(''));
 
+    // if there weren't any other editors before, half of the screen has now become obscured
+    // recenter the nodes
+    if (isFirstEditor) zoomToNodes();
+
     return tab;
 }
 
 export function removeTab(id: string) {
     codeEditorMap[id]?.destroy();
+    delete codeEditorMap[id];
     const tab = document.querySelector<HTMLDivElement>(`.tab[data-node-id="${id}"]`);
     const wasSelected = tab.dataset.selected === 'yes';
     tab?.remove();
@@ -68,6 +76,9 @@ export function removeTab(id: string) {
         const newSelected = document.querySelector<HTMLDivElement>(`.tab`);
         newSelected?.onclick(new MouseEvent(''));
     }
+
+    // if it was the last code editor, center the nodes again
+    if (Object.keys(codeEditorMap).length == 0) zoomToNodes();
 }
 
 export const codeEditorMap = {};

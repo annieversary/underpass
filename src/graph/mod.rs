@@ -44,6 +44,8 @@ pub struct GraphNode {
 
 // we dont need the inputs/outputs in here since they dont contain any data
 // we know what inputs and outputs each node has
+//
+// NOTE: none of these can be unit variants, since they are actually empty objects in the json
 #[derive(Deserialize, Debug)]
 #[serde(tag = "label", content = "controls")]
 pub enum GraphNodeInternal {
@@ -54,8 +56,8 @@ pub enum GraphNodeInternal {
     Oql {
         query: Control<String>,
     },
-    #[serde(rename = "Osm Filter")]
-    OsmFilter {
+    #[serde(rename = "Oql Statement")]
+    OqlStatement {
         nodes: Control<bool>,
         ways: Control<bool>,
         relations: Control<bool>,
@@ -63,6 +65,10 @@ pub enum GraphNodeInternal {
         key: Control<String>,
         value: Control<String>,
     },
+    #[serde(rename = "Oql Union")]
+    OqlUnion {},
+    #[serde(rename = "Oql Difference")]
+    OqlDifference {},
 
     // geojson nodes
     #[serde(rename = "Overpass")]

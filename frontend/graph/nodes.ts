@@ -75,7 +75,9 @@ export const geojsonNodeList: NodeList = [
 
 export const queryNodeList: NodeList = [
     ["Code", () => oqlCode(true)],
-    ["Filter", filter],
+    ["Statement", oqlStatement],
+    ["Union", oqlUnion],
+    ["Difference", oqlDifference],
 ];
 
 
@@ -196,8 +198,8 @@ export function oqlCode(selected: boolean): Node {
     return node;
 }
 
-export function filter(): Node {
-    const node = new ClassicPreset.Node('Osm Filter') as Node;
+export function oqlStatement(): Node {
+    const node = new ClassicPreset.Node('Oql Statement') as Node;
     node.type = 'query';
     node.addOutput("out", new ClassicPreset.Output(querySocket, "Query"));
 
@@ -225,5 +227,23 @@ export function filter(): Node {
         initial: "primary",
         label: 'value',
     }));
+    return node;
+}
+
+export function oqlUnion(): Node {
+    const node = new ClassicPreset.Node("Oql Union") as Node;
+    node.type = "query";
+    node.addInput("a", new ClassicPreset.Input(querySocket, "A"));
+    node.addInput("b", new ClassicPreset.Input(querySocket, "B"));
+    node.addOutput("out", new ClassicPreset.Output(querySocket, "A ∪ B"));
+    return node;
+}
+
+export function oqlDifference(): Node {
+    const node = new ClassicPreset.Node("Oql Difference") as Node;
+    node.type = "query";
+    node.addInput("a", new ClassicPreset.Input(querySocket, "A"));
+    node.addInput("b", new ClassicPreset.Input(querySocket, "B"));
+    node.addOutput("out", new ClassicPreset.Output(querySocket, "A - B"));
     return node;
 }

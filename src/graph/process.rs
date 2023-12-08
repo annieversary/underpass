@@ -63,6 +63,9 @@ struct NodeProcessor<'a> {
     memory: HashMap<String, NodeOutput>,
 }
 
+// NOTE: this whole thing assumes every node has only one type of output
+// it will need adapting to support multiple outputs
+
 impl<'a> NodeProcessor<'a> {
     /// find a connection that targets `n` on the `target` input
     fn find_connection(&self, n: &GraphNode, target: &str) -> Result<&GraphConnection, GraphError> {
@@ -94,17 +97,9 @@ impl<'a> NodeProcessor<'a> {
 
         let res: Result<NodeOutput, SearchError> = match &n.node {
             GraphNodeInternal::Map {} => unreachable!(),
-            GraphNodeInternal::Union {} => {
-                let mut a_collection = self.get_input(n, "a").await?.into_features()?;
-                let b_collection = self.get_input(n, "b").await?.into_features()?;
-
-                a_collection.features.extend(b_collection.features);
-                Ok(a_collection.into())
-            }
-
             // query nodes
             GraphNodeInternal::Oql { query } => Ok(query.value.clone().into()),
-            GraphNodeInternal::OsmFilter {
+            GraphNodeInternal::OqlStatement {
                 nodes,
                 ways,
                 relations,
@@ -128,6 +123,22 @@ impl<'a> NodeProcessor<'a> {
                 } else {
                     Ok(format!("{f}[{}={}]({round});", key.value, value.value).into())
                 }
+            }
+            GraphNodeInternal::OqlUnion {} => {
+                let a = self.get_input(n, "a").await?.into_query()?;
+                let b = self.get_input(n, "b").await?.into_query()?;
+
+                let query = format!("({a} {b});");
+
+                Ok(query.into())
+            }
+            GraphNodeInternal::OqlDifference {} => {
+                let a = self.get_input(n, "a").await?.into_query()?;
+                let b = self.get_input(n, "b").await?.into_query()?;
+
+                let query = format!("({a} - {b});");
+
+                Ok(query.into())
             }
 
             // geojson nodes
@@ -163,6 +174,13 @@ impl<'a> NodeProcessor<'a> {
                     }
                     .into())
                 }
+            }
+            GraphNodeInternal::Union {} => {
+                let mut a_collection = self.get_input(n, "a").await?.into_features()?;
+                let b_collection = self.get_input(n, "b").await?.into_features()?;
+
+                a_collection.features.extend(b_collection.features);
+                Ok(a_collection.into())
             }
             GraphNodeInternal::RoadAngleFilter { min, max } => {
                 let collection = self.get_input(n, "in").await?.into_features()?;

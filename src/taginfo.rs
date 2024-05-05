@@ -111,7 +111,7 @@ pub async fn update_taginfo() -> Result<impl IntoResponse, TagInfoError> {
 
     // store all of this as a json file we can serve
     let keys = serde_json::to_string(&vec)?;
-    std::fs::write("./public/taginfo.json", keys)?;
+    std::fs::write("./data/taginfo/taginfo.json", keys)?;
 
     Ok("done")
 }

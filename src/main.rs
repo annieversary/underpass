@@ -30,7 +30,7 @@ async fn main() {
         .into();
     let _guard1 = setup_tracing(log_path);
 
-    if !Path::new("./public/taginfo.json").exists() {
+    if !Path::new("./data/taginfo/taginfo.json").exists() {
         if let Err(err) = taginfo::update_taginfo().await {
             panic!("{:?}", err);
         }
@@ -43,7 +43,7 @@ async fn main() {
         .route("/index.js", get(js))
         .route(
             "/taginfo.json",
-            get(|| async { read_to_string("./public/taginfo.json").unwrap() }),
+            get(|| async { read_to_string("./data/taginfo/taginfo.json").unwrap() }),
         )
         .route("/update-taginfo", get(taginfo::update_taginfo))
         .route("/search", post(search::search));

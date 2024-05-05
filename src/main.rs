@@ -7,6 +7,7 @@ use axum::{
     Router,
 };
 use backtrace::Backtrace;
+use const_format::str_replace;
 use std::path::PathBuf;
 use tracing_appender::non_blocking::WorkerGuard;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
@@ -71,7 +72,14 @@ async fn home() -> Html<String> {
     return Html(read_to_string("./frontend/index.html").unwrap());
 
     #[cfg(not(debug_assertions))]
-    Html(include_str!("../public/index.html").to_string())
+    Html(
+        str_replace!(
+            include_str!("../public/index.html"),
+            "GIT_HASH",
+            env!("GIT_HASH")
+        )
+        .to_string(),
+    )
 }
 
 async fn css() -> ([(&'static str, &'static str); 1], String) {

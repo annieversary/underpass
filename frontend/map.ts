@@ -1,5 +1,6 @@
-import maplibregl, { MapLayerEventType, GeoJSONSource, AddLayerObject, Map, Popup, MapGeoJSONFeature } from 'maplibre-gl';
+import maplibregl, { MapLayerEventType, GeoJSONSource, AddLayerObject, Map, Popup, MapGeoJSONFeature, LngLat } from 'maplibre-gl';
 import MaplibreGeocoder from '@maplibre/maplibre-gl-geocoder';
+import * as turf from '@turf/turf';
 
 let [zoom, lat, lng] = JSON.parse(window.localStorage.getItem("viewport")) || [
     16, 51.945356463918586, -0.0175273074135589,
@@ -64,6 +65,20 @@ map.on("style.load", () => {
             setTimeout(() => justOpenedPopup = false, 100);
 
             const f = e.features[0];
+            const geometry = f.geometry;
+
+            let point: LngLat;
+            if (geometry.type == 'Point') {
+                point = new LngLat(geometry.coordinates[0], geometry.coordinates[1]);
+            } else if (geometry.type == 'LineString' || geometry.type == 'Polygon') {
+                const nearest = turf.nearestPoint(
+                    turf.point([e.lngLat.lng, e.lngLat.lat]),
+                    turf.featureCollection(geometry.coordinates.map((p: any) => turf.point(p)))
+                );
+                point = new LngLat(nearest.geometry.coordinates[0], nearest.geometry.coordinates[1]);
+            } else {
+                point = e.lngLat;
+            }
 
             const props = Object.entries(f.properties)
                 .filter(([k, _]) => !k.startsWith("__"))
@@ -71,22 +86,21 @@ map.on("style.load", () => {
                 .join('<br>');
 
             const osm_id = f.properties.osm_id;
-            const osm_type = f.properties.osm_type
+            const osm_type = f.properties.osm_type;
 
             const div = document.createElement('div');
             div.innerHTML = `<a href="//www.openstreetmap.org/${osm_type}/${osm_id}" target="_blank" class="osm-link">${osm_id}</a><br/><br/>
             ${props}<br/><br/>
-            <a href="https://google.co.uk/maps?q=${e.lngLat.lat},${e.lngLat.lng}" target="_blank" class="map-link google-maps-link">google maps</a>
+            <a href="https://google.co.uk/maps?q=${point.lat},${point.lng}" target="_blank" class="map-link google-maps-link">google maps</a>
             <br/>
-            <a href="javascript:navigator.clipboard.writeText('${e.lngLat.lat},${e.lngLat.lng}')" class="map-link">copy</a>
-            `;
+            <a href="javascript:navigator.clipboard.writeText('${point.lat},${point.lng}')" class="map-link">copy</a>`;
 
             div.querySelector<HTMLAnchorElement>('.google-maps-link').onclick = () => {
                 markAsVisited(f, true);
             };
 
             new Popup()
-                .setLngLat(e.lngLat)
+                .setLngLat(point)
                 .setDOMContent(div)
                 .addTo(map)
                 .on('close', () => f.id ? map.setFeatureState(

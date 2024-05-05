@@ -7,7 +7,6 @@ use axum::{
     Router,
 };
 use backtrace::Backtrace;
-use const_format::str_replace;
 use std::path::PathBuf;
 use tracing_appender::non_blocking::WorkerGuard;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
@@ -73,7 +72,7 @@ async fn home() -> Html<String> {
 
     #[cfg(not(debug_assertions))]
     Html(
-        str_replace!(
+        const_format::str_replace!(
             include_str!("../public/index.html"),
             "GIT_HASH",
             env!("GIT_HASH")

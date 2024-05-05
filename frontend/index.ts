@@ -1,5 +1,5 @@
 import { GeoJSONSource, MapMouseEvent } from 'maplibre-gl';
-import turfLength from '@turf/length';
+import * as turf from '@turf/turf';
 import { GeoJSON, Feature } from 'geojson';
 
 import './style.css';
@@ -249,7 +249,7 @@ map.on('load', () => {
 
             distanceMeasureGeojson.features.push(linestring);
 
-            distance = (1000 * turfLength(linestring as Feature)).toLocaleString();
+            distance = (1000 * turf.length(linestring as Feature)).toLocaleString();
         }
 
         mapSetSource('distance-measure', distanceMeasureGeojson as GeoJSON);

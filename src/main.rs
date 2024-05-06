@@ -11,6 +11,7 @@ use std::path::PathBuf;
 use tracing_appender::non_blocking::WorkerGuard;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
+mod elevation;
 mod graph;
 mod nominatim;
 mod osm_to_geojson;
@@ -29,6 +30,8 @@ async fn main() {
         .expect("failed to get LOG_PATH")
         .into();
     let _guard1 = setup_tracing(log_path);
+
+    let _map = elevation::ElevationMap::new().expect("failed to load elevation map");
 
     if !Path::new("./data/taginfo/taginfo.json").exists() {
         if let Err(err) = taginfo::update_taginfo().await {

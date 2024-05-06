@@ -71,6 +71,7 @@ export const geojsonNodeList: NodeList = [
     ["Union", union],
     ["Road Angle Filter", roadAngleFilter],
     ["Road Length Filter", roadLengthFilter],
+    ["Elevation Filter", elevationFilter],
 ];
 
 export const queryNodeList: NodeList = [
@@ -157,6 +158,23 @@ export function roadLengthFilter(): Node {
     }));
     return node;
 }
+
+export function elevationFilter(): Node {
+    const node = new ClassicPreset.Node("Elevation Filter") as Node;
+    node.type = "geojson";
+    node.addInput("in", new ClassicPreset.Input(geojsonSocket, "In"));
+    node.addOutput("out", new ClassicPreset.Output(geojsonSocket, "Out"));
+    node.addControl("min", new Control("number", {
+        initial: 30,
+        label: 'min',
+    }));
+    node.addControl("max", new Control("number", {
+        initial: 35,
+        label: 'max',
+    }));
+    return node;
+}
+
 
 export function map(): Node {
     const node = new ClassicPreset.Node("Map") as Node;

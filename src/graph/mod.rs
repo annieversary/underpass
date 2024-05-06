@@ -86,6 +86,11 @@ pub enum GraphNodeInternal {
         max: Control<f64>,
         tolerance: Control<f64>,
     },
+    #[serde(rename = "Elevation Filter")]
+    ElevationFilter {
+        min: Control<i64>,
+        max: Control<i64>,
+    },
     Union {},
     InViewOf {},
 }

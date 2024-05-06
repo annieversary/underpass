@@ -1,16 +1,25 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
-use axum::response::{IntoResponse, Json};
+use axum::{
+    extract::State,
+    response::{IntoResponse, Json},
+};
 use geojson::GeoJson;
 use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use thiserror::Error;
 
-use crate::graph::{process::process_graph, Graph, GraphError};
+use crate::{
+    graph::{process::process_graph, Graph, GraphError},
+    AppState,
+};
 
-pub async fn search(Json(json): Json<SearchParams>) -> Result<Json<SearchResults>, SearchError> {
-    let result = process_graph(json.graph, json.bbox).await?;
+pub async fn search(
+    State(state): State<Arc<AppState>>,
+    Json(json): Json<SearchParams>,
+) -> Result<Json<SearchResults>, SearchError> {
+    let result = process_graph(json.graph, json.bbox, &state.elevation_map).await?;
 
     let geojson = GeoJson::FeatureCollection(result.collection);
 

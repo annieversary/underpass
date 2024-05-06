@@ -3,6 +3,7 @@ use std::collections::{BTreeMap, HashMap};
 use geojson::FeatureCollection;
 
 use crate::{
+    elevation::ElevationMap,
     graph::{
         nodes, utils::detect_cycles, Graph, GraphConnection, GraphError, GraphNode,
         GraphNodeInternal, GraphResult,
@@ -13,7 +14,11 @@ use crate::{
     search::{Bbox, GeocodeaArea, SearchError},
 };
 
-pub async fn process_graph(graph: Graph, bbox: Bbox) -> Result<GraphResult, SearchError> {
+pub async fn process_graph(
+    graph: Graph,
+    bbox: Bbox,
+    elevation_map: &ElevationMap,
+) -> Result<GraphResult, SearchError> {
     if detect_cycles(&graph.connections) {
         Err(GraphError::Cycle)?;
     }
@@ -42,6 +47,8 @@ pub async fn process_graph(graph: Graph, bbox: Bbox) -> Result<GraphResult, Sear
         geocode_areas: vec![],
         processed_queries: Default::default(),
         memory: Default::default(),
+
+        elevation_map,
     };
 
     let collection = np.process_node(prev).await?.into_features()?;
@@ -61,6 +68,8 @@ struct NodeProcessor<'a> {
     geocode_areas: Vec<GeocodeaArea>,
     processed_queries: HashMap<String, String>,
     memory: HashMap<String, NodeOutput>,
+
+    elevation_map: &'a ElevationMap,
 }
 
 // NOTE: this whole thing assumes every node has only one type of output
@@ -213,6 +222,18 @@ impl<'a> NodeProcessor<'a> {
                 // TODO filter input_collection by whether it can see the aux_collection
 
                 todo!()
+            }
+            GraphNodeInternal::ElevationFilter { min, max } => {
+                let collection = self.get_input(n, "in").await?.into_features()?;
+
+                let res = nodes::elevation_filter::filter(
+                    collection,
+                    min.value,
+                    max.value,
+                    &n.id,
+                    &self.elevation_map,
+                )?;
+                Ok(res.into())
             }
         };
 

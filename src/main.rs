@@ -1,5 +1,5 @@
-use std::fs::read_to_string;
 use std::path::Path;
+use std::{fs::read_to_string, sync::Arc};
 
 use axum::{
     response::Html,
@@ -7,6 +7,7 @@ use axum::{
     Router,
 };
 use backtrace::Backtrace;
+use elevation::ElevationMap;
 use std::path::PathBuf;
 use tracing_appender::non_blocking::WorkerGuard;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
@@ -31,7 +32,7 @@ async fn main() {
         .into();
     let _guard1 = setup_tracing(log_path);
 
-    let _map = elevation::ElevationMap::new().expect("failed to load elevation map");
+    let elevation_map = elevation::ElevationMap::new().expect("failed to load elevation map");
 
     if !Path::new("./data/taginfo/taginfo.json").exists() {
         if let Err(err) = taginfo::update_taginfo().await {
@@ -49,7 +50,8 @@ async fn main() {
             get(|| async { read_to_string("./data/taginfo/taginfo.json").unwrap() }),
         )
         .route("/update-taginfo", get(taginfo::update_taginfo))
-        .route("/search", post(search::search));
+        .route("/search", post(search::search))
+        .with_state(Arc::new(AppState { elevation_map }));
 
     let port: u16 = std::env::var("PORT")
         .ok()
@@ -64,6 +66,10 @@ async fn main() {
         .serve(app.into_make_service())
         .await
         .unwrap();
+}
+
+pub struct AppState {
+    elevation_map: ElevationMap,
 }
 
 async fn home() -> Html<String> {

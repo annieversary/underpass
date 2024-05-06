@@ -39,7 +39,10 @@ impl ElevationMap {
             .ok_or(ElevationError::CoordNotFound)?
             .data;
 
-        lookup(path, lng, lat)
+        // TODO cache the dataset
+        let data = Dataset::open(path)?;
+
+        lookup(&data, lng, lat)
     }
 }
 
@@ -69,9 +72,7 @@ struct CornerCoords {
 }
 
 // https://stackoverflow.com/questions/13439357/extract-point-from-raster-in-gdal
-fn lookup(path: &Path, lng: f64, lat: f64) -> Result<i64, ElevationError> {
-    let data = Dataset::open(path)?;
-
+fn lookup(data: &Dataset, lng: f64, lat: f64) -> Result<i64, ElevationError> {
     let gt = data.geo_transform()?;
 
     // unsure where this came from. i found it somewhere but i cant find it again

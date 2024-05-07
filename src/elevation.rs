@@ -30,6 +30,10 @@ impl ElevationMap {
         Ok(Self { tree })
     }
 
+    pub fn lookup_or_0(&self, lng: f64, lat: f64) -> i64 {
+        self.lookup(lng, lat).unwrap_or(0)
+    }
+
     /// looks up the elevation for the given coordinates
     pub fn lookup(&self, lng: f64, lat: f64) -> Result<i64, ElevationError> {
         let path = self

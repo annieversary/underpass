@@ -33,32 +33,26 @@ pub fn filter(
 
             match &geo.value {
                 Value::Point(point) => {
-                    if let Ok(elevation) = map.lookup(point[0], point[1]) {
-                        if min <= elevation && elevation <= max {
-                            return vec![feature];
-                        }
+                    let elevation = map.lookup_or_0(point[0], point[1]);
+                    if min <= elevation && elevation <= max {
+                        return vec![feature];
                     }
                 }
                 Value::LineString(line) => {
                     return line
                         .windows(2)
                         .flat_map(|pair| {
-                            if let Ok(elevation1) = map.lookup(pair[0][0], pair[0][1]) {
-                                if let Ok(elevation2) = map.lookup(pair[1][0], pair[1][1]) {
-                                    if (min <= elevation1 && elevation1 <= max)
-                                        || (min <= elevation2 && elevation2 <= max)
-                                    {
-                                        return Some(Feature {
-                                            id: feature
-                                                .id
-                                                .clone()
-                                                .and_then(|id| new_id(id, RAF_NUMBER)),
-                                            geometry: Some(Value::LineString(pair.to_vec()).into()),
-                                            properties: feature.properties.clone(),
-                                            ..Default::default()
-                                        });
-                                    }
-                                }
+                            let elevation1 = map.lookup_or_0(pair[0][0], pair[0][1]);
+                            let elevation2 = map.lookup_or_0(pair[1][0], pair[1][1]);
+                            if (min <= elevation1 && elevation1 <= max)
+                                || (min <= elevation2 && elevation2 <= max)
+                            {
+                                return Some(Feature {
+                                    id: feature.id.clone().and_then(|id| new_id(id, RAF_NUMBER)),
+                                    geometry: Some(Value::LineString(pair.to_vec()).into()),
+                                    properties: feature.properties.clone(),
+                                    ..Default::default()
+                                });
                             }
 
                             None

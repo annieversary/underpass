@@ -28,12 +28,12 @@ impl ElevationMap {
         Ok(Self { tree })
     }
 
-    pub fn lookup_or_0(&self, lng: f64, lat: f64) -> i64 {
+    pub fn lookup_or_0(&self, lng: f64, lat: f64) -> i32 {
         self.lookup(lng, lat).unwrap_or(0)
     }
 
     /// looks up the elevation for the given coordinates
-    pub fn lookup(&self, lng: f64, lat: f64) -> Result<i64, ElevationError> {
+    pub fn lookup(&self, lng: f64, lat: f64) -> Result<i32, ElevationError> {
         let path = self
             .tree
             .search(Rect::new_point([lng, lat]))
@@ -74,7 +74,7 @@ struct CornerCoords {
 }
 
 // https://stackoverflow.com/questions/13439357/extract-point-from-raster-in-gdal
-fn lookup(data: &Dataset, lng: f64, lat: f64) -> Result<i64, ElevationError> {
+fn lookup(data: &Dataset, lng: f64, lat: f64) -> Result<i32, ElevationError> {
     let gt = data.geo_transform()?;
 
     // unsure where this came from. i found it somewhere but i cant find it again
@@ -83,7 +83,7 @@ fn lookup(data: &Dataset, lng: f64, lat: f64) -> Result<i64, ElevationError> {
 
     let band = data.rasterband(1)?;
 
-    let point_array = band.read_as_array::<i64>(
+    let point_array = band.read_as_array::<i32>(
         (x as isize, y as isize),
         (1, 1),
         (1, 1),

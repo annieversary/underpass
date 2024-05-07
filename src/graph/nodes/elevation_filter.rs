@@ -9,8 +9,8 @@ use geojson::{Feature, FeatureCollection, Value};
 
 pub fn filter(
     collection: FeatureCollection,
-    min: i64,
-    max: i64,
+    min: i32,
+    max: i32,
     node_id: &str,
     map: &ElevationMap,
 ) -> Result<FeatureCollection, GraphError> {

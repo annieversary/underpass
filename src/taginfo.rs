@@ -1,12 +1,17 @@
-use std::time::Duration;
+use std::{path::PathBuf, sync::Arc, time::Duration};
 
-use axum::response::{IntoResponse, Json};
+use axum::{
+    extract::State,
+    response::{IntoResponse, Json},
+};
 use reqwest::StatusCode;
 use scraper::{CaseSensitivity, Html, Selector};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use thiserror::Error;
-use tokio::time::sleep;
+use tokio::{fs::read_to_string, time::sleep};
+
+use crate::AppState;
 
 fn all_keys_url(page: usize, per_page: usize) -> String {
     format!("https://taginfo.openstreetmap.org/api/4/keys/all?page={page}&rp={per_page}&sortname=count_all&sortorder=desc&filter=in_wiki")
@@ -19,7 +24,17 @@ fn all_values_url(key: &str, page: usize, per_page: usize) -> String {
 const PER_PAGE: usize = 999;
 const SLEEP_TIME: u64 = 100;
 
-pub async fn update_taginfo() -> Result<impl IntoResponse, TagInfoError> {
+pub async fn get_taginfo(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+    read_to_string(state.taginfo_path()).await.unwrap()
+}
+
+pub async fn update_taginfo_route(
+    State(state): State<Arc<AppState>>,
+) -> Result<impl IntoResponse, TagInfoError> {
+    update_taginfo(state.taginfo_path()).await
+}
+
+pub async fn update_taginfo(taginfo_path: PathBuf) -> Result<impl IntoResponse, TagInfoError> {
     println!("updating taginfo");
     let mut keys: Vec<Key> = vec![];
     let mut page = 1;
@@ -111,7 +126,8 @@ pub async fn update_taginfo() -> Result<impl IntoResponse, TagInfoError> {
 
     // store all of this as a json file we can serve
     let keys = serde_json::to_string(&vec)?;
-    std::fs::write("./data/taginfo/taginfo.json", keys)?;
+
+    std::fs::write(taginfo_path, keys)?;
 
     Ok("done")
 }

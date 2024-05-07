@@ -12,9 +12,7 @@ pub struct ElevationMap {
 }
 
 impl ElevationMap {
-    pub fn new() -> Result<Self, ElevationError> {
-        let path = Path::new("./data/elevation");
-
+    pub fn new(path: &Path) -> Result<Self, ElevationError> {
         let mut tree = RTree::new();
 
         for entry in path.read_dir()?.flatten() {

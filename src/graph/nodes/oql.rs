@@ -8,6 +8,7 @@ pub struct Oql {
     query: Control<String>,
 }
 
+#[async_trait::async_trait]
 impl Node for Oql {
     fn id(&self) -> &str {
         &self.id

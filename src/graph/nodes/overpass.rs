@@ -14,6 +14,7 @@ pub struct Overpass {
     timeout: Control<u32>,
 }
 
+#[async_trait::async_trait]
 impl Node for Overpass {
     fn id(&self) -> &str {
         &self.id
@@ -23,7 +24,7 @@ impl Node for Overpass {
         let query = processor.get_input(self, "query").await?.into_query()?;
 
         let (query, found_areas) =
-            preprocess_query(&query, &self.bbox, self.timeout.value, OsmNominatim).await?;
+            preprocess_query(&query, &processor.bbox, self.timeout.value, OsmNominatim).await?;
 
         let client = reqwest::Client::new();
         let res = client
@@ -38,8 +39,8 @@ impl Node for Overpass {
                 .await
                 .map_err(|_| GraphError::OverpassJsonError)?;
 
-            self.geocode_areas.extend(found_areas);
-            self.processed_queries.insert(self.id.clone(), query);
+            processor.geocode_areas.extend(found_areas);
+            processor.processed_queries.insert(self.id.clone(), query);
 
             Ok(osm_to_geojson(osm).into())
         } else {

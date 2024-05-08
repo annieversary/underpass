@@ -2,8 +2,9 @@ use rand::{distributions::Alphanumeric, Rng};
 use regex::Regex;
 
 use crate::{
+    graph::errors::GraphError,
     nominatim::*,
-    search::{Bbox, GeocodeaArea, SearchError},
+    search::{Bbox, GeocodeaArea},
 };
 
 pub async fn preprocess_query(
@@ -11,7 +12,7 @@ pub async fn preprocess_query(
     bbox: &Bbox,
     timeout: u32,
     nominatim: impl Nominatim,
-) -> Result<(String, Vec<GeocodeaArea>), SearchError> {
+) -> Result<(String, Vec<GeocodeaArea>), GraphError> {
     let mut geocode_areas = vec![];
 
     let re = Regex::new(r"\{\{\s*([\w.]+)(:([\S\s]+?))?\}\}").unwrap();

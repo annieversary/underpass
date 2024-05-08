@@ -7,6 +7,7 @@ pub struct OqlDifference {
     id: String,
 }
 
+#[async_trait::async_trait]
 impl Node for OqlDifference {
     fn id(&self) -> &str {
         &self.id

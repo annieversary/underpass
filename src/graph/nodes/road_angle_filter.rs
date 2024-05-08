@@ -18,6 +18,7 @@ pub struct RoadAngleFilter {
     max: Control<f64>,
 }
 
+#[async_trait::async_trait]
 impl Node for RoadAngleFilter {
     fn id(&self) -> &str {
         &self.id

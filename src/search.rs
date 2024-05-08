@@ -62,8 +62,6 @@ pub struct GeocodeaArea {
 pub enum SearchError {
     #[error("network error")]
     Network(#[from] reqwest::Error),
-    #[error("Nominatim: {0}")]
-    Nominatim(String),
     #[error("{0}")]
     Graph(#[from] GraphError),
 }

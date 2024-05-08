@@ -49,8 +49,7 @@ pub async fn process_graph(
         .iter()
         .find(|n| matches!(n, GraphNode::Map(_)))
         .ok_or(GraphError::MapMissing)?
-        .id()
-        .clone();
+        .id();
 
     let Some(con) = graph.connections.iter().find(|c| c.target == map_id) else {
         return Ok(ProcessResult::default());
@@ -83,10 +82,10 @@ pub struct NodeProcessor<'a> {
     // i dont think these two lifetimes are the same but meh
     nodes: &'a BTreeMap<&'a str, &'a GraphNode>,
     connections: Vec<GraphConnection>,
-    bbox: Bbox,
-    geocode_areas: Vec<GeocodeaArea>,
-    processed_queries: HashMap<String, String>,
-    memory: HashMap<&'a str, NodeOutput>,
+    pub bbox: Bbox,
+    pub geocode_areas: Vec<GeocodeaArea>,
+    pub processed_queries: HashMap<String, String>,
+    memory: HashMap<String, NodeOutput>,
 
     pub elevation_map: &'a ElevationMap,
 }
@@ -96,7 +95,7 @@ pub struct NodeProcessor<'a> {
 
 impl<'a> NodeProcessor<'a> {
     /// find a connection that targets `n` on the `target` input
-    fn find_connection(&self, n: &GraphNode, target: &str) -> Result<&GraphConnection, GraphError> {
+    fn find_connection(&self, n: &dyn Node, target: &str) -> Result<&GraphConnection, GraphError> {
         self.connections
             .iter()
             .find(|c| c.target == n.id() && target == c.target_input)
@@ -113,7 +112,7 @@ impl<'a> NodeProcessor<'a> {
     /// get and compute the node connected to input `name`
     pub async fn get_input(
         &mut self,
-        node: &dyn Node,
+        node: &(dyn Node + Send + Sync),
         name: &str,
     ) -> Result<NodeOutput, GraphError> {
         let con = self.find_connection(node, name)?;
@@ -123,13 +122,13 @@ impl<'a> NodeProcessor<'a> {
 
     #[async_recursion::async_recursion]
     async fn process_node(&mut self, n: &GraphNode) -> Result<NodeOutput, GraphError> {
-        if let Some(res) = self.memory.get(&n.id()) {
+        if let Some(res) = self.memory.get(n.id()) {
             return Ok(res.clone());
         }
 
-        let res = n.process(&mut self).await?;
+        let res = n.process(self).await?;
 
-        self.memory.insert(n.id(), res.clone());
+        self.memory.insert(n.id().to_string(), res.clone());
 
         Ok(res)
     }

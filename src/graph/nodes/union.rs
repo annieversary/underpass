@@ -7,6 +7,7 @@ pub struct Union {
     id: String,
 }
 
+#[async_trait::async_trait]
 impl Node for Union {
     fn id(&self) -> &str {
         &self.id

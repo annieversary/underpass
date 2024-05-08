@@ -14,12 +14,13 @@ pub struct OqlStatement {
     value: Control<String>,
 }
 
+#[async_trait::async_trait]
 impl Node for OqlStatement {
     fn id(&self) -> &str {
         &self.id
     }
 
-    async fn process(&self, processor: &mut NodeProcessor<'_>) -> Result<NodeOutput, GraphError> {
+    async fn process(&self, _processor: &mut NodeProcessor<'_>) -> Result<NodeOutput, GraphError> {
         let f = match (self.nodes.value, self.ways.value, self.relations.value) {
             (true, true, true) => "nwr",
             (true, true, false) => "nw",

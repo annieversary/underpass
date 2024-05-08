@@ -7,6 +7,7 @@ pub struct OqlUnion {
     id: String,
 }
 
+#[async_trait::async_trait]
 impl Node for OqlUnion {
     fn id(&self) -> &str {
         &self.id

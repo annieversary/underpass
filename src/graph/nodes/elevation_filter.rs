@@ -14,10 +14,11 @@ use serde::Deserialize;
 #[derive(Deserialize, Debug)]
 pub struct ElevationFilter {
     id: String,
-    min: Control<f64>,
-    max: Control<f64>,
+    min: Control<i32>,
+    max: Control<i32>,
 }
 
+#[async_trait::async_trait]
 impl Node for ElevationFilter {
     fn id(&self) -> &str {
         &self.id

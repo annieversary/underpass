@@ -7,6 +7,7 @@ pub struct InViewOf {
     id: String,
 }
 
+#[async_trait::async_trait]
 impl Node for InViewOf {
     fn id(&self) -> &str {
         &self.id

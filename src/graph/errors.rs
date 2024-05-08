@@ -1,5 +1,7 @@
 use thiserror::Error;
 
+use crate::nominatim::NominatimError;
+
 #[derive(Error, Debug)]
 pub enum GraphError {
     #[error("Connection refers to a non-existing node")]
@@ -24,4 +26,8 @@ pub enum GraphError {
     WrongInputType { got: String, expected: String },
     #[error("Error parsing Overpass json")]
     OverpassJsonError,
+    #[error("network error")]
+    Network(#[from] reqwest::Error),
+    #[error("nominatim error {0}")]
+    Nominatim(#[from] NominatimError),
 }

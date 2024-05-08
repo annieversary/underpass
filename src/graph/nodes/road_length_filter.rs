@@ -18,6 +18,7 @@ pub struct RoadLengthFilter {
     tolerance: Control<f64>,
 }
 
+#[async_trait::async_trait]
 impl Node for RoadLengthFilter {
     fn id(&self) -> &str {
         &self.id

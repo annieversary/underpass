@@ -1,11 +1,43 @@
 use crate::graph::{
+    errors::GraphError,
+    output::NodeOutput,
+    process::NodeProcessor,
     utils::{bearing_distance, new_id, RLF_NUMBER},
-    GraphError,
+    Control, Node,
 };
 use geo::{GeodesicBearing, Point};
 use geojson::{Feature, FeatureCollection, Value};
+use serde::Deserialize;
 
-pub fn filter(
+#[derive(Deserialize, Debug)]
+pub struct RoadLengthFilter {
+    id: String,
+
+    min: Control<f64>,
+    max: Control<f64>,
+    tolerance: Control<f64>,
+}
+
+impl Node for RoadLengthFilter {
+    fn id(&self) -> &str {
+        &self.id
+    }
+
+    async fn process(&self, processor: &mut NodeProcessor<'_>) -> Result<NodeOutput, GraphError> {
+        let collection = processor.get_input(self, "in").await?.into_features()?;
+
+        let res = filter(
+            collection,
+            self.min.value,
+            self.max.value,
+            self.tolerance.value,
+            &self.id,
+        )?;
+        Ok(res.into())
+    }
+}
+
+fn filter(
     collection: FeatureCollection,
     min: f64,
     max: f64,

@@ -1,11 +1,37 @@
 use crate::graph::{
+    errors::GraphError,
+    output::NodeOutput,
+    process::NodeProcessor,
     utils::{new_id, RAF_NUMBER},
-    GraphError,
+    Control, Node,
 };
 use geo::{GeodesicBearing, Point};
 use geojson::{Feature, FeatureCollection, Value};
 
-pub fn filter(
+use serde::Deserialize;
+
+#[derive(Deserialize, Debug)]
+pub struct RoadAngleFilter {
+    id: String,
+
+    min: Control<f64>,
+    max: Control<f64>,
+}
+
+impl Node for RoadAngleFilter {
+    fn id(&self) -> &str {
+        &self.id
+    }
+
+    async fn process(&self, processor: &mut NodeProcessor<'_>) -> Result<NodeOutput, GraphError> {
+        let collection = processor.get_input(self, "in").await?.into_features()?;
+
+        let res = filter(collection, self.min.value, self.max.value, &self.id)?;
+        Ok(res.into())
+    }
+}
+
+fn filter(
     collection: FeatureCollection,
     min: f64,
     max: f64,

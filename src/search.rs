@@ -11,7 +11,7 @@ use serde_json::json;
 use thiserror::Error;
 
 use crate::{
-    graph::{process::process_graph, Graph, GraphError},
+    graph::{errors::GraphError, process::process_graph, Graph},
     AppState,
 };
 

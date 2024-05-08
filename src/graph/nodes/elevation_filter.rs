@@ -1,13 +1,43 @@
 use crate::{
     elevation::ElevationMap,
     graph::{
+        errors::GraphError,
+        output::NodeOutput,
+        process::NodeProcessor,
         utils::{new_id, RAF_NUMBER},
-        GraphError,
+        Control, Node,
     },
 };
 use geojson::{Feature, FeatureCollection, Value};
+use serde::Deserialize;
 
-pub fn filter(
+#[derive(Deserialize, Debug)]
+pub struct ElevationFilter {
+    id: String,
+    min: Control<f64>,
+    max: Control<f64>,
+}
+
+impl Node for ElevationFilter {
+    fn id(&self) -> &str {
+        &self.id
+    }
+
+    async fn process(&self, processor: &mut NodeProcessor<'_>) -> Result<NodeOutput, GraphError> {
+        let collection = processor.get_input(self, "in").await?.into_features()?;
+
+        let res = filter(
+            collection,
+            self.min.value,
+            self.max.value,
+            &self.id,
+            processor.elevation_map,
+        )?;
+        Ok(res.into())
+    }
+}
+
+fn filter(
     collection: FeatureCollection,
     min: i32,
     max: i32,

@@ -2,10 +2,10 @@ use std::{collections::HashMap, sync::Arc};
 
 use axum::{
     extract::State,
+    http::StatusCode,
     response::{IntoResponse, Json},
 };
 use geojson::GeoJson;
-use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use thiserror::Error;

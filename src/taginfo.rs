@@ -2,9 +2,9 @@ use std::{path::PathBuf, sync::Arc, time::Duration};
 
 use axum::{
     extract::State,
+    http::StatusCode,
     response::{IntoResponse, Json},
 };
-use reqwest::StatusCode;
 use scraper::{CaseSensitivity, Html, Selector};
 use serde::{Deserialize, Serialize};
 use serde_json::json;

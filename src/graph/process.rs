@@ -231,7 +231,7 @@ impl<'a> NodeProcessor<'a> {
                     min.value,
                     max.value,
                     &n.id,
-                    &self.elevation_map,
+                    self.elevation_map,
                 )?;
                 Ok(res.into())
             }

@@ -1,6 +1,6 @@
 use serde::Deserialize;
 
-use crate::graph::{errors::GraphError, output::NodeOutput, process::NodeProcessor, Node};
+use crate::graph::{errors::GraphError, nodes::Node, output::NodeOutput, process::NodeProcessor};
 
 #[derive(Deserialize, Debug)]
 pub struct Union {

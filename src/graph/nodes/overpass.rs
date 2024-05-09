@@ -1,7 +1,7 @@
 use serde::Deserialize;
 
 use crate::{
-    graph::{errors::GraphError, output::NodeOutput, process::NodeProcessor, Control, Node},
+    graph::{errors::GraphError, nodes::Node, output::NodeOutput, process::NodeProcessor, Control},
     nominatim::OsmNominatim,
     osm_to_geojson::{osm_to_geojson, Osm},
     preprocess::preprocess_query,

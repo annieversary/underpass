@@ -2,10 +2,11 @@ use crate::{
     elevation::ElevationMap,
     graph::{
         errors::GraphError,
+        nodes::Node,
         output::NodeOutput,
         process::NodeProcessor,
         utils::{new_id, RAF_NUMBER},
-        Control, Node,
+        Control,
     },
 };
 use geojson::{Feature, FeatureCollection, Value};

@@ -1,6 +1,8 @@
 use serde::Deserialize;
 
-use crate::graph::{errors::GraphError, output::NodeOutput, process::NodeProcessor, Control, Node};
+use crate::graph::{
+    errors::GraphError, nodes::Node, output::NodeOutput, process::NodeProcessor, Control,
+};
 
 #[derive(Deserialize, Debug)]
 pub struct Oql {

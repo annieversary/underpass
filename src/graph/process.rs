@@ -5,13 +5,11 @@ use geojson::FeatureCollection;
 use crate::{
     elevation::ElevationMap,
     graph::{
-        errors::GraphError, output::NodeOutput, utils::detect_cycles, Graph, GraphConnection,
-        GraphNode,
+        errors::GraphError, nodes::Node, output::NodeOutput, utils::detect_cycles, Graph,
+        GraphConnection, GraphNode,
     },
     search::{Bbox, GeocodeaArea, SearchError},
 };
-
-use super::Node;
 
 pub struct ProcessResult {
     pub collection: FeatureCollection,

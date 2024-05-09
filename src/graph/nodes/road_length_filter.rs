@@ -1,9 +1,10 @@
 use crate::graph::{
     errors::GraphError,
+    nodes::Node,
     output::NodeOutput,
     process::NodeProcessor,
     utils::{bearing_distance, new_id, RLF_NUMBER},
-    Control, Node,
+    Control,
 };
 use geo::{GeodesicBearing, Point};
 use geojson::{Feature, FeatureCollection, Value};

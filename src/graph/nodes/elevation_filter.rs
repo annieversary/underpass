@@ -14,25 +14,24 @@ use serde::Deserialize;
 
 #[derive(Deserialize, Debug)]
 pub struct ElevationFilter {
-    id: String,
     min: Control<i32>,
     max: Control<i32>,
 }
 
 #[async_trait::async_trait]
 impl Node for ElevationFilter {
-    fn id(&self) -> &str {
-        &self.id
-    }
-
-    async fn process(&self, processor: &mut NodeProcessor<'_>) -> Result<NodeOutput, GraphError> {
-        let collection = processor.get_input(self, "in").await?.into_features()?;
+    async fn process(
+        &self,
+        processor: &mut NodeProcessor<'_>,
+        node_id: &str,
+    ) -> Result<NodeOutput, GraphError> {
+        let collection = processor.get_input(node_id, "in").await?.into_features()?;
 
         let res = filter(
             collection,
             self.min.value,
             self.max.value,
-            &self.id,
+            node_id,
             processor.elevation_map,
         )?;
         Ok(res.into())

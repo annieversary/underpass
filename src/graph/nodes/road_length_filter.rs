@@ -12,8 +12,6 @@ use serde::Deserialize;
 
 #[derive(Deserialize, Debug)]
 pub struct RoadLengthFilter {
-    id: String,
-
     min: Control<f64>,
     max: Control<f64>,
     tolerance: Control<f64>,
@@ -21,19 +19,19 @@ pub struct RoadLengthFilter {
 
 #[async_trait::async_trait]
 impl Node for RoadLengthFilter {
-    fn id(&self) -> &str {
-        &self.id
-    }
-
-    async fn process(&self, processor: &mut NodeProcessor<'_>) -> Result<NodeOutput, GraphError> {
-        let collection = processor.get_input(self, "in").await?.into_features()?;
+    async fn process(
+        &self,
+        processor: &mut NodeProcessor<'_>,
+        node_id: &str,
+    ) -> Result<NodeOutput, GraphError> {
+        let collection = processor.get_input(node_id, "in").await?.into_features()?;
 
         let res = filter(
             collection,
             self.min.value,
             self.max.value,
             self.tolerance.value,
-            &self.id,
+            node_id,
         )?;
         Ok(res.into())
     }

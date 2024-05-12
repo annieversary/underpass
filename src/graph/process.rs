@@ -6,8 +6,8 @@ use crate::{
     cache::Caches,
     elevation::ElevationMap,
     graph::{
-        errors::GraphError, nodes::Node, output::NodeOutput, utils::detect_cycles, Graph,
-        GraphConnection, GraphNode,
+        errors::GraphError, output::NodeOutput, utils::detect_cycles, Graph, GraphConnection,
+        GraphNode,
     },
     search::{Bbox, GeocodeaArea, SearchError},
 };
@@ -42,16 +42,11 @@ pub async fn process_graph(
         Err(GraphError::Cycle)?;
     }
 
-    let nodes = BTreeMap::from_iter(graph.nodes.iter().map(|n| (n.id(), n)));
+    let nodes = BTreeMap::from_iter(graph.nodes.iter().map(|n| (n.id.as_str(), n)));
 
-    let map_id = graph
-        .nodes
-        .iter()
-        .find(|n| matches!(n, GraphNode::Map(_)))
-        .ok_or(GraphError::MapMissing)?
-        .id();
+    let map_id = &graph.map_node()?.id;
 
-    let Some(con) = graph.connections.iter().find(|c| c.target == map_id) else {
+    let Some(con) = graph.connections.iter().find(|c| c.target == *map_id) else {
         return Ok(ProcessResult::default());
     };
     let prev = nodes
@@ -97,12 +92,12 @@ pub struct NodeProcessor<'a> {
 
 impl<'a> NodeProcessor<'a> {
     /// find a connection that targets `n` on the `target` input
-    fn find_connection(&self, n: &dyn Node, target: &str) -> Result<&GraphConnection, GraphError> {
+    fn find_connection(&self, node_id: &str, target: &str) -> Result<&GraphConnection, GraphError> {
         self.connections
             .iter()
-            .find(|c| c.target == n.id() && target == c.target_input)
+            .find(|c| c.target.as_str() == node_id && target == c.target_input)
             .ok_or_else(|| GraphError::InputMissing {
-                node_id: n.id().to_string(),
+                node_id: node_id.to_string(),
             })
     }
 
@@ -112,25 +107,22 @@ impl<'a> NodeProcessor<'a> {
     }
 
     /// get and compute the node connected to input `name`
-    pub async fn get_input(
-        &mut self,
-        node: &(dyn Node + Send + Sync),
-        name: &str,
-    ) -> Result<NodeOutput, GraphError> {
-        let con = self.find_connection(node, name)?;
+    pub async fn get_input(&mut self, node_id: &str, name: &str) -> Result<NodeOutput, GraphError> {
+        let con = self.find_connection(node_id, name)?;
         let prev = self.get_node(&con.source)?;
         self.process_node(prev).await
     }
 
     #[async_recursion::async_recursion]
-    async fn process_node(&mut self, n: &GraphNode) -> Result<NodeOutput, GraphError> {
-        if let Some(res) = self.memory.get(n.id()) {
+    async fn process_node(&mut self, node: &GraphNode) -> Result<NodeOutput, GraphError> {
+        if let Some(res) = self.memory.get(&node.id) {
             return Ok(res.clone());
         }
 
-        let res = n.process(self).await?;
+        // TODO maybe we can store the current id in the struct so we can use it from get_input?
+        let res = node.process(self).await?;
 
-        self.memory.insert(n.id().to_string(), res.clone());
+        self.memory.insert(node.id.clone(), res.clone());
 
         Ok(res)
     }

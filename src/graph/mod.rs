@@ -1,6 +1,9 @@
 use serde::Deserialize;
 
-use self::nodes::GraphNode;
+use self::{
+    errors::GraphError,
+    nodes::{GraphNode, GraphNodeInternal},
+};
 
 pub mod errors;
 mod nodes;
@@ -12,6 +15,15 @@ mod utils;
 pub struct Graph {
     nodes: Vec<GraphNode>,
     connections: Vec<GraphConnection>,
+}
+
+impl Graph {
+    fn map_node(&self) -> Result<&GraphNode, GraphError> {
+        self.nodes
+            .iter()
+            .find(|n| matches!(n.node, GraphNodeInternal::Map(_)))
+            .ok_or(GraphError::MapMissing)
+    }
 }
 
 #[derive(Deserialize, Debug)]

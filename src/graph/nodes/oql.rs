@@ -6,17 +6,16 @@ use crate::graph::{
 
 #[derive(Deserialize, Debug)]
 pub struct Oql {
-    id: String,
     query: Control<String>,
 }
 
 #[async_trait::async_trait]
 impl Node for Oql {
-    fn id(&self) -> &str {
-        &self.id
-    }
-
-    async fn process(&self, _processor: &mut NodeProcessor<'_>) -> Result<NodeOutput, GraphError> {
+    async fn process(
+        &self,
+        _processor: &mut NodeProcessor<'_>,
+        _node_id: &str,
+    ) -> Result<NodeOutput, GraphError> {
         Ok(self.query.value.clone().into())
     }
 }

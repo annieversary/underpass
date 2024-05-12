@@ -11,19 +11,17 @@ use crate::{
 
 #[derive(Deserialize, Debug)]
 pub struct Overpass {
-    id: String,
-
     timeout: Control<u32>,
 }
 
 #[async_trait::async_trait]
 impl Node for Overpass {
-    fn id(&self) -> &str {
-        &self.id
-    }
-
-    async fn process(&self, processor: &mut NodeProcessor<'_>) -> Result<NodeOutput, GraphError> {
-        let query = processor.get_input(self, "query").await?.into_query()?;
+    async fn process(
+        &self,
+        processor: &mut NodeProcessor<'_>,
+        node_id: &str,
+    ) -> Result<NodeOutput, GraphError> {
+        let query = processor.get_input(node_id, "query").await?.into_query()?;
 
         // cache
         let bbox = processor.bbox;
@@ -31,12 +29,14 @@ impl Node for Overpass {
             .caches
             .overpass
             .try_get_with((query.clone(), processor.bbox), async move {
-                run(&query, bbox, self.timeout.value, &self.id).await
+                run(&query, bbox, self.timeout.value, node_id).await
             })
             .await?;
 
         processor.geocode_areas.extend(found_areas);
-        processor.processed_queries.insert(self.id.clone(), query);
+        processor
+            .processed_queries
+            .insert(node_id.to_string(), query);
 
         Ok(feature_collection.into())
     }

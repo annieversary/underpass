@@ -14,16 +14,25 @@ pub mod union;
 
 #[async_trait::async_trait]
 pub trait Node {
-    async fn process(&self, processor: &mut NodeProcessor<'_>) -> Result<NodeOutput, GraphError>;
+    async fn process(
+        &self,
+        processor: &mut NodeProcessor<'_>,
+        node_id: &str,
+    ) -> Result<NodeOutput, GraphError>;
+}
 
-    fn id(&self) -> &str;
+#[derive(serde::Deserialize, Debug)]
+pub struct GraphNode {
+    pub id: String,
+    #[serde(flatten)]
+    pub node: GraphNodeInternal,
 }
 
 // we dont need the inputs/outputs in here since they dont contain any data
 // we know what inputs and outputs each node has
 #[derive(serde::Deserialize, Debug)]
 #[serde(tag = "label", content = "controls")]
-pub enum GraphNode {
+pub enum GraphNodeInternal {
     Map(map::Map),
 
     // query nodes
@@ -51,38 +60,22 @@ pub enum GraphNode {
 // TODO use a macro to generate all of this
 // the ambassador crate did not work with async_trait fsr
 impl GraphNode {
-    pub fn id(&self) -> &str {
-        match self {
-            GraphNode::Map(m) => m.id(),
-            GraphNode::Oql(m) => m.id(),
-            GraphNode::OqlStatement(m) => m.id(),
-            GraphNode::OqlUnion(m) => m.id(),
-            GraphNode::OqlDifference(m) => m.id(),
-            GraphNode::Overpass(m) => m.id(),
-            GraphNode::RoadAngleFilter(m) => m.id(),
-            GraphNode::RoadLengthFilter(m) => m.id(),
-            GraphNode::ElevationFilter(m) => m.id(),
-            GraphNode::Union(m) => m.id(),
-            GraphNode::InViewOf(m) => m.id(),
-        }
-    }
-
     pub async fn process(
         &self,
         processor: &mut NodeProcessor<'_>,
     ) -> Result<NodeOutput, GraphError> {
-        match self {
-            GraphNode::Map(m) => m.process(processor).await,
-            GraphNode::Oql(m) => m.process(processor).await,
-            GraphNode::OqlStatement(m) => m.process(processor).await,
-            GraphNode::OqlUnion(m) => m.process(processor).await,
-            GraphNode::OqlDifference(m) => m.process(processor).await,
-            GraphNode::Overpass(m) => m.process(processor).await,
-            GraphNode::RoadAngleFilter(m) => m.process(processor).await,
-            GraphNode::RoadLengthFilter(m) => m.process(processor).await,
-            GraphNode::ElevationFilter(m) => m.process(processor).await,
-            GraphNode::Union(m) => m.process(processor).await,
-            GraphNode::InViewOf(m) => m.process(processor).await,
+        match &self.node {
+            GraphNodeInternal::Map(m) => m.process(processor, &self.id).await,
+            GraphNodeInternal::Oql(m) => m.process(processor, &self.id).await,
+            GraphNodeInternal::OqlStatement(m) => m.process(processor, &self.id).await,
+            GraphNodeInternal::OqlUnion(m) => m.process(processor, &self.id).await,
+            GraphNodeInternal::OqlDifference(m) => m.process(processor, &self.id).await,
+            GraphNodeInternal::Overpass(m) => m.process(processor, &self.id).await,
+            GraphNodeInternal::RoadAngleFilter(m) => m.process(processor, &self.id).await,
+            GraphNodeInternal::RoadLengthFilter(m) => m.process(processor, &self.id).await,
+            GraphNodeInternal::ElevationFilter(m) => m.process(processor, &self.id).await,
+            GraphNodeInternal::Union(m) => m.process(processor, &self.id).await,
+            GraphNodeInternal::InViewOf(m) => m.process(processor, &self.id).await,
         }
     }
 }

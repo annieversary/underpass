@@ -13,22 +13,20 @@ use serde::Deserialize;
 
 #[derive(Deserialize, Debug)]
 pub struct RoadAngleFilter {
-    id: String,
-
     min: Control<f64>,
     max: Control<f64>,
 }
 
 #[async_trait::async_trait]
 impl Node for RoadAngleFilter {
-    fn id(&self) -> &str {
-        &self.id
-    }
+    async fn process(
+        &self,
+        processor: &mut NodeProcessor<'_>,
+        node_id: &str,
+    ) -> Result<NodeOutput, GraphError> {
+        let collection = processor.get_input(node_id, "in").await?.into_features()?;
 
-    async fn process(&self, processor: &mut NodeProcessor<'_>) -> Result<NodeOutput, GraphError> {
-        let collection = processor.get_input(self, "in").await?.into_features()?;
-
-        let res = filter(collection, self.min.value, self.max.value, &self.id)?;
+        let res = filter(collection, self.min.value, self.max.value, node_id)?;
         Ok(res.into())
     }
 }

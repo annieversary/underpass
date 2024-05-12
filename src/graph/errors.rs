@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use thiserror::Error;
 
 use crate::nominatim::NominatimError;
@@ -30,4 +32,6 @@ pub enum GraphError {
     Network(#[from] reqwest::Error),
     #[error("nominatim error {0}")]
     Nominatim(#[from] NominatimError),
+    #[error("{0}")]
+    Arced(#[from] Arc<Self>),
 }

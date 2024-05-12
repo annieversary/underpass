@@ -1,4 +1,4 @@
-use std::{net::SocketAddr, sync::Arc};
+use std::{net::SocketAddr, path::PathBuf, sync::Arc};
 
 use axum::{
     response::Html,
@@ -6,12 +6,13 @@ use axum::{
     Router,
 };
 use backtrace::Backtrace;
+use cache::Caches;
 use elevation::ElevationMap;
-use std::path::PathBuf;
 use tokio::{fs::read_to_string, net::TcpListener};
 use tracing_appender::non_blocking::WorkerGuard;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
+mod cache;
 mod elevation;
 mod graph;
 mod nominatim;
@@ -44,6 +45,7 @@ async fn main() {
     let state = AppState {
         elevation_map,
         data_path,
+        caches: Caches::new(),
     };
 
     let taginfo_path = state.taginfo_path();
@@ -81,6 +83,8 @@ async fn main() {
 pub struct AppState {
     elevation_map: ElevationMap,
     data_path: PathBuf,
+
+    caches: Caches,
 }
 
 impl AppState {

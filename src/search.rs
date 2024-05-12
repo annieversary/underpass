@@ -1,4 +1,4 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, hash::Hash, sync::Arc};
 
 use axum::{
     extract::State,
@@ -19,7 +19,13 @@ pub async fn search(
     State(state): State<Arc<AppState>>,
     Json(json): Json<SearchParams>,
 ) -> Result<Json<SearchResults>, SearchError> {
-    let result = process_graph(json.graph, json.bbox, &state.elevation_map).await?;
+    let result = process_graph(
+        json.graph,
+        json.bbox,
+        &state.elevation_map,
+        state.caches.clone(),
+    )
+    .await?;
 
     let geojson = GeoJson::FeatureCollection(result.collection);
 
@@ -30,11 +36,25 @@ pub async fn search(
     }))
 }
 
-#[derive(Deserialize, Default, Clone, Copy)]
+#[derive(Deserialize, Default, Clone, Copy, PartialEq)]
 pub struct Bbox {
     pub ne: [f32; 2],
     pub sw: [f32; 2],
 }
+
+impl Hash for Bbox {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        // shhh baby dont worry about it
+        // these floats come from Deserialize, so they should be the same
+        self.ne[0].to_bits().hash(state);
+        self.ne[1].to_bits().hash(state);
+        self.sw[0].to_bits().hash(state);
+        self.sw[1].to_bits().hash(state);
+    }
+}
+
+// ummmmmm
+impl Eq for Bbox {}
 
 #[derive(Deserialize)]
 pub struct SearchParams {

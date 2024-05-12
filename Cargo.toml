@@ -30,6 +30,8 @@ backtrace = "0.3.69"
 const_format = "0.2.32"
 gdal = { version = "0.16", features = ["bindgen", "array"] }
 rtree_rs = "0.1.4"
+moka = { version = "0.12.7", features = ["future"] }
+ahash = "0.8.11"
 
 [dev-dependencies]
 mockall = "0.11.2"

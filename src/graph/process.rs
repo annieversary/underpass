@@ -3,6 +3,7 @@ use std::collections::{BTreeMap, HashMap};
 use geojson::FeatureCollection;
 
 use crate::{
+    cache::Caches,
     elevation::ElevationMap,
     graph::{
         errors::GraphError, nodes::Node, output::NodeOutput, utils::detect_cycles, Graph,
@@ -35,6 +36,7 @@ pub async fn process_graph(
     graph: Graph,
     bbox: Bbox,
     elevation_map: &ElevationMap,
+    caches: Caches,
 ) -> Result<ProcessResult, SearchError> {
     if detect_cycles(&graph.connections) {
         Err(GraphError::Cycle)?;
@@ -65,6 +67,7 @@ pub async fn process_graph(
         memory: Default::default(),
 
         elevation_map,
+        caches,
     };
 
     let collection = np.process_node(prev).await?.into_features()?;
@@ -86,6 +89,7 @@ pub struct NodeProcessor<'a> {
     memory: HashMap<String, NodeOutput>,
 
     pub elevation_map: &'a ElevationMap,
+    pub caches: Caches,
 }
 
 // NOTE: this whole thing assumes every node has only one type of output

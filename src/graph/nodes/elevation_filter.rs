@@ -1,5 +1,5 @@
 use crate::{
-    elevation::ElevationMap,
+    elevation::CachedElevationMap,
     graph::{
         errors::GraphError,
         nodes::Node,
@@ -43,7 +43,7 @@ fn filter(
     min: i32,
     max: i32,
     node_id: &str,
-    map: &ElevationMap,
+    map: &mut CachedElevationMap,
 ) -> Result<FeatureCollection, GraphError> {
     // TODO add client-side validation too
 

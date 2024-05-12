@@ -4,7 +4,7 @@ use geojson::FeatureCollection;
 
 use crate::{
     cache::Caches,
-    elevation::ElevationMap,
+    elevation::{CachedElevationMap, ElevationMap},
     graph::{
         errors::GraphError, output::NodeOutput, utils::detect_cycles, Graph, GraphConnection,
         GraphNode,
@@ -61,7 +61,7 @@ pub async fn process_graph(
         processed_queries: Default::default(),
         memory: Default::default(),
 
-        elevation_map,
+        elevation_map: &mut elevation_map.cached(),
         caches,
     };
 
@@ -83,7 +83,7 @@ pub struct NodeProcessor<'a> {
     pub processed_queries: HashMap<String, String>,
     memory: HashMap<String, NodeOutput>,
 
-    pub elevation_map: &'a ElevationMap,
+    pub elevation_map: &'a mut CachedElevationMap<'a>,
     pub caches: Caches,
 }
 

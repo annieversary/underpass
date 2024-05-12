@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     io,
     path::{Path, PathBuf},
 };
@@ -28,11 +29,21 @@ impl ElevationMap {
         Ok(Self { tree })
     }
 
+    pub fn cached(&self) -> CachedElevationMap<'_> {
+        CachedElevationMap {
+            map: self,
+            cache: HashMap::new(),
+        }
+    }
+
+    /// looks up the elevation for the given coordinates, or returns 0 if there's an error
+    #[allow(dead_code)]
     pub fn lookup_or_0(&self, lng: f64, lat: f64) -> i32 {
         self.lookup(lng, lat).unwrap_or(0)
     }
 
     /// looks up the elevation for the given coordinates
+    #[allow(dead_code)]
     pub fn lookup(&self, lng: f64, lat: f64) -> Result<i32, ElevationError> {
         let path = self
             .tree
@@ -41,10 +52,42 @@ impl ElevationMap {
             .ok_or(ElevationError::CoordNotFound)?
             .data;
 
-        // TODO cache the dataset
         let data = Dataset::open(path)?;
 
         lookup(&data, lng, lat)
+    }
+}
+
+pub struct CachedElevationMap<'a> {
+    map: &'a ElevationMap,
+    cache: HashMap<PathBuf, Dataset>,
+}
+
+impl<'a> CachedElevationMap<'a> {
+    /// looks up the elevation for the given coordinates, or returns 0 if there's an error
+    pub fn lookup_or_0(&mut self, lng: f64, lat: f64) -> i32 {
+        self.lookup(lng, lat).unwrap_or(0)
+    }
+
+    /// looks up the elevation for the given coordinates
+    pub fn lookup(&mut self, lng: f64, lat: f64) -> Result<i32, ElevationError> {
+        let path = self
+            .map
+            .tree
+            .search(Rect::new_point([lng, lat]))
+            .next()
+            .ok_or(ElevationError::CoordNotFound)?
+            .data;
+
+        if let Some(data) = self.cache.get(path) {
+            lookup(data, lng, lat)
+        } else {
+            let data = Dataset::open(path)?;
+            let r = lookup(&data, lng, lat);
+            self.cache.insert(path.clone(), data);
+
+            r
+        }
     }
 }
 

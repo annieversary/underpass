@@ -61,7 +61,7 @@ pub async fn process_graph(
         processed_queries: Default::default(),
         memory: Default::default(),
 
-        elevation_map: &mut elevation_map.cached(),
+        elevation_map: &elevation_map,
         caches,
     };
 
@@ -83,7 +83,7 @@ pub struct NodeProcessor<'a> {
     pub processed_queries: HashMap<String, String>,
     memory: HashMap<String, NodeOutput>,
 
-    pub elevation_map: &'a mut CachedElevationMap<'a>,
+    pub elevation_map: &'a ElevationMap,
     pub caches: Caches,
 }
 

@@ -33,7 +33,7 @@ get-data: data-taginfo data-elevation
 
 # download elevation data to $DATA_PATH/elevation/
 data-elevation:
-    data/elevation/create-dataset.sh "$DATA_PATH/elevation"
+    scripts/elevation/create-dataset.sh "$DATA_PATH/elevation"
 
 # update $DATA_PATH/taginfo/taginfo.json
 data-taginfo:

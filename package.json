@@ -7,7 +7,7 @@
     "build": "esbuild frontend/index.ts --bundle --sourcemap --target=es2017 --outfile=public/index.js",
     "watch": "esbuild frontend/index.ts --bundle --sourcemap --target=es2017 --outfile=public/index.js --watch",
     "typecheck": "tsc -noEmit",
-    "prod": "esbuild frontend/index.ts --bundle --minify --target=es2017 --outfile=public/index.js && cp frontend/index.html public",
+    "prod": "esbuild frontend/index.ts --bundle --minify --target=es2017 --outfile=public/index.js",
     "lezer": "lezer-generator frontend/oql-parser/oql.grammar -o frontend/oql-parser/oql.js",
     "test": "jest"
   },

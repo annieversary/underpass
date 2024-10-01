@@ -3,12 +3,18 @@
 
 set -eu
 
-curl https://srtm.csi.cgiar.org/wp-content/uploads/files/250m/SRTM_NE_250m_TIF.rar > ne.rar
-unrar x ne.rar
-rm ne.rar
-curl https://srtm.csi.cgiar.org/wp-content/uploads/files/250m/SRTM_SE_250m_TIF.rar > se.rar
-unrar x se.rar
-rm se.rar
-curl https://srtm.csi.cgiar.org/wp-content/uploads/files/250m/SRTM_W_250m_TIF.rar > w.rar
-unrar x w.rar
-rm w.rar
+if [ -n "$1" ]; then
+    OUTPUTDIR="$1"
+else
+    OUTPUTDIR="."
+fi
+
+curl https://srtm.csi.cgiar.org/wp-content/uploads/files/250m/SRTM_NE_250m_TIF.rar > $OUTPUTDIR/ne.rar
+unrar x $OUTPUTDIR/ne.rar
+rm $OUTPUTDIR/ne.rar
+curl https://srtm.csi.cgiar.org/wp-content/uploads/files/250m/SRTM_SE_250m_TIF.rar > $OUTPUTDIR/se.rar
+unrar x $OUTPUTDIR/se.rar
+rm $OUTPUTDIR/se.rar
+curl https://srtm.csi.cgiar.org/wp-content/uploads/files/250m/SRTM_W_250m_TIF.rar > $OUTPUTDIR/w.rar
+unrar x $OUTPUTDIR/w.rar
+rm $OUTPUTDIR/w.rar

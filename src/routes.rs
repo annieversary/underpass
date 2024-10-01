@@ -7,6 +7,7 @@ use axum::{
     routing::{get, post},
     Router,
 };
+#[allow(unused_imports)]
 use tokio::fs::read_to_string;
 
 pub fn make_router() -> Router<Arc<AppState>> {

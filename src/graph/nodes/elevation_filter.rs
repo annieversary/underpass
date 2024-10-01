@@ -45,7 +45,12 @@ fn filter(
     node_id: &str,
     map: &ElevationMap,
 ) -> Result<FeatureCollection, GraphError> {
+    let _span = tracing::trace_span!("elevation_filter::filter");
+    let _span = _span.enter();
+
     // TODO add client-side validation too
+
+    let mut map = map.cached();
 
     if min > max {
         Err(GraphError::RoadAngle {
@@ -98,6 +103,8 @@ fn filter(
             vec![]
         })
         .collect();
+
+    tracing::trace!("there were {} cached datasets", map.cache.len());
 
     Ok(FeatureCollection {
         bbox: None,

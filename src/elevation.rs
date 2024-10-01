@@ -64,7 +64,7 @@ impl ElevationMap {
 
 pub struct CachedElevationMap<'a> {
     map: &'a ElevationMap,
-    cache: HashMap<PathBuf, Dataset>,
+    pub cache: HashMap<PathBuf, Dataset>,
 }
 
 impl<'a> CachedElevationMap<'a> {
@@ -84,8 +84,10 @@ impl<'a> CachedElevationMap<'a> {
             .data;
 
         if let Some(data) = self.cache.get(path) {
+            tracing::trace!("cache hit: dataset {path:?} was in cache");
             lookup(data, lng, lat)
         } else {
+            tracing::trace!("cache miss: dataset {path:?} was not in cache");
             let data = Dataset::open(path)?;
             let r = lookup(&data, lng, lat);
             self.cache.insert(path.clone(), data);

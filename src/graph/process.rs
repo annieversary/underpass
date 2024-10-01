@@ -1,6 +1,7 @@
 use std::collections::{BTreeMap, HashMap};
 
 use geojson::FeatureCollection;
+use tracing::Instrument;
 
 use crate::{
     cache::Caches,
@@ -115,12 +116,14 @@ impl<'a> NodeProcessor<'a> {
 
     #[async_recursion::async_recursion]
     async fn process_node(&mut self, node: &GraphNode) -> Result<NodeOutput, GraphError> {
+        let span = tracing::trace_span!("process_node", node_id = &node.id);
+
         if let Some(res) = self.memory.get(&node.id) {
             return Ok(res.clone());
         }
 
         // TODO maybe we can store the current id in the struct so we can use it from get_input?
-        let res = node.process(self).await?;
+        let res = node.process(self).instrument(span).await?;
 
         self.memory.insert(node.id.clone(), res.clone());
 

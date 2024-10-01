@@ -116,11 +116,14 @@ impl<'a> NodeProcessor<'a> {
 
     #[async_recursion::async_recursion]
     async fn process_node(&mut self, node: &GraphNode) -> Result<NodeOutput, GraphError> {
-        let span = tracing::trace_span!("process_node", node_id = &node.id);
+        let span = tracing::debug_span!("process_node", node_id = &node.id);
 
         if let Some(res) = self.memory.get(&node.id) {
+            span.in_scope(|| tracing::debug!("node was in memory, skipping processing"));
             return Ok(res.clone());
         }
+
+        span.in_scope(|| tracing::debug!("node is not in memory, beginning processing"));
 
         // TODO maybe we can store the current id in the struct so we can use it from get_input?
         let res = node.process(self).instrument(span).await?;

@@ -49,16 +49,18 @@ impl ElevationMap {
     /// looks up the elevation for the given coordinates
     #[allow(dead_code)]
     pub fn lookup(&self, lng: f64, lat: f64) -> Result<i32, ElevationError> {
-        let path = self
+        let path = self.dataset_path(lng, lat)?;
+        let data = Dataset::open(path)?;
+        lookup(&data, lng, lat)
+    }
+
+    pub fn dataset_path(&self, lng: f64, lat: f64) -> Result<&Path, ElevationError> {
+        Ok(self
             .tree
             .search(Rect::new_point([lng, lat]))
             .next()
             .ok_or(ElevationError::CoordNotFound)?
-            .data;
-
-        let data = Dataset::open(path)?;
-
-        lookup(&data, lng, lat)
+            .data)
     }
 }
 
@@ -75,13 +77,7 @@ impl<'a> CachedElevationMap<'a> {
 
     /// looks up the elevation for the given coordinates
     pub fn lookup(&mut self, lng: f64, lat: f64) -> Result<i32, ElevationError> {
-        let path = self
-            .map
-            .tree
-            .search(Rect::new_point([lng, lat]))
-            .next()
-            .ok_or(ElevationError::CoordNotFound)?
-            .data;
+        let path = self.map.dataset_path(lng, lat)?;
 
         if let Some(data) = self.cache.get(path) {
             tracing::trace!("cache hit: dataset {path:?} was in cache");
@@ -90,7 +86,7 @@ impl<'a> CachedElevationMap<'a> {
             tracing::trace!("cache miss: dataset {path:?} was not in cache");
             let data = Dataset::open(path)?;
             let r = lookup(&data, lng, lat);
-            self.cache.insert(path.clone(), data);
+            self.cache.insert(path.to_path_buf(), data);
 
             r
         }

@@ -11,8 +11,8 @@ use serde_json::json;
 use thiserror::Error;
 
 use crate::{
+    app_state::AppState,
     graph::{errors::GraphError, process::process_graph, Graph},
-    AppState,
 };
 
 pub async fn search(

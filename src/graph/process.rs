@@ -4,7 +4,7 @@ use geojson::FeatureCollection;
 
 use crate::{
     cache::Caches,
-    elevation::{CachedElevationMap, ElevationMap},
+    elevation::ElevationMap,
     graph::{
         errors::GraphError, output::NodeOutput, utils::detect_cycles, Graph, GraphConnection,
         GraphNode,

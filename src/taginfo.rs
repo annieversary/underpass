@@ -11,7 +11,7 @@ use serde_json::json;
 use thiserror::Error;
 use tokio::{fs::read_to_string, time::sleep};
 
-use crate::AppState;
+use crate::app_state::AppState;
 
 fn all_keys_url(page: usize, per_page: usize) -> String {
     format!("https://taginfo.openstreetmap.org/api/4/keys/all?page={page}&rp={per_page}&sortname=count_all&sortorder=desc&filter=in_wiki")

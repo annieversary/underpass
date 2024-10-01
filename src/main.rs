@@ -20,15 +20,17 @@ async fn main() {
         .expect("failed to get DATA")
         .into();
 
-    let mut elevation_path = data_path.clone();
-    elevation_path.push("elevation");
-    let elevation_map =
-        elevation::ElevationMap::new(&elevation_path).expect("failed to load elevation map");
-
     let taginfo_path = taginfo_path(&data_path);
     if !taginfo_path.exists() {
         ::tracing::error!("{taginfo_path:?} not found");
     }
+
+    let mut elevation_path = data_path.clone();
+    elevation_path.push("elevation");
+    let elevation_map = elevation::ElevationMap::new_gdal(&elevation_path)
+        .expect("failed to load elevation map")
+        // TODO enable cached elevation map according to env variable
+        .cached_if(false);
 
     let state = app_state::AppState::new(data_path, elevation_map);
 

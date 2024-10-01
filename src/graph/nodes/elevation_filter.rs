@@ -33,12 +33,13 @@ impl Node for ElevationFilter {
             self.max.value,
             node_id,
             processor.elevation_map,
-        )?;
+        )
+        .await?;
         Ok(res.into())
     }
 }
 
-fn filter(
+async fn filter(
     collection: FeatureCollection,
     min: i32,
     max: i32,
@@ -54,50 +55,42 @@ fn filter(
         })?;
     }
 
-    let features = collection
-        .features
-        .into_iter()
-        .flat_map(|feature| {
-            let Some(geo) = &feature.geometry else {
-                return vec![];
-            };
+    let mut features = vec![];
+    for feature in collection.features {
+        let Some(geo) = &feature.geometry else {
+            continue;
+        };
 
-            match &geo.value {
-                Value::Point(point) => {
-                    let elevation = map.lookup_or_0(point[0], point[1]);
-                    if min <= elevation && elevation <= max {
-                        return vec![feature];
+        match &geo.value {
+            Value::Point(point) => {
+                let elevation = map.lookup_or_0(point[0], point[1]).await;
+
+                if min <= elevation && elevation <= max {
+                    features.push(feature);
+                }
+            }
+            Value::LineString(line) => {
+                for pair in line.windows(2) {
+                    let elevation1 = map.lookup_or_0(pair[0][0], pair[0][1]).await;
+                    let elevation2 = map.lookup_or_0(pair[1][0], pair[1][1]).await;
+
+                    if (min <= elevation1 && elevation1 <= max)
+                        || (min <= elevation2 && elevation2 <= max)
+                    {
+                        features.push(Feature {
+                            id: feature.id.clone().and_then(|id| new_id(id, RAF_NUMBER)),
+                            geometry: Some(Value::LineString(pair.to_vec()).into()),
+                            properties: feature.properties.clone(),
+                            ..Default::default()
+                        });
                     }
                 }
-                Value::LineString(line) => {
-                    return line
-                        .windows(2)
-                        .flat_map(|pair| {
-                            let elevation1 = map.lookup_or_0(pair[0][0], pair[0][1]);
-                            let elevation2 = map.lookup_or_0(pair[1][0], pair[1][1]);
-                            if (min <= elevation1 && elevation1 <= max)
-                                || (min <= elevation2 && elevation2 <= max)
-                            {
-                                return Some(Feature {
-                                    id: feature.id.clone().and_then(|id| new_id(id, RAF_NUMBER)),
-                                    geometry: Some(Value::LineString(pair.to_vec()).into()),
-                                    properties: feature.properties.clone(),
-                                    ..Default::default()
-                                });
-                            }
-
-                            None
-                        })
-                        .collect();
-                }
-                Value::GeometryCollection(_) => unimplemented!(),
-                // we dont actually have any other type
-                _ => unreachable!(),
             }
-
-            vec![]
-        })
-        .collect();
+            Value::GeometryCollection(_) => unimplemented!(),
+            // we dont actually have any other type
+            _ => unreachable!(),
+        }
+    }
 
     Ok(FeatureCollection {
         bbox: None,

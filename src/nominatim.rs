@@ -44,7 +44,7 @@ impl Nominatim for OsmNominatim {
         let arr = res
             .as_array()
             .ok_or_else(|| NominatimError::Nominatim("response was not an array".to_string()))?;
-        if let Some(serde_json::Value::Object(obj)) = arr.get(0) {
+        if let Some(serde_json::Value::Object(obj)) = arr.first() {
             let id = obj
                 .get("osm_id")
                 .ok_or_else(|| {

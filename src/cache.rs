@@ -24,5 +24,11 @@ impl Caches {
     }
 }
 
+impl Default for Caches {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 pub type OverpassCache =
     Cache<(String, Bbox), (FeatureCollection, Vec<GeocodeaArea>, String), RandomState>;

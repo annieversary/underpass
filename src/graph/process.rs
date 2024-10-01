@@ -61,7 +61,7 @@ pub async fn process_graph(
         processed_queries: Default::default(),
         memory: Default::default(),
 
-        elevation_map: &elevation_map,
+        elevation_map,
         caches,
     };
 

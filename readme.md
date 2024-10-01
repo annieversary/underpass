@@ -6,6 +6,23 @@ aiming to implement extra processing/filtering
 the implementation differs highly from overpass-turbo's, as underpass performs the fetching and filtering steps on a backend,
 instead of directly on the user's browser
 
+## building
+
+you will need `rust`, `cargo`, `node`, and `npm` installed
+
+frontend is built by running either `npm run build` (development), `npm run watch` (watch command), or `npm run prod` (production).
+typescript can be typechecked by running `npm run typecheck`
+
+rust can be built and run by `cargo run`, and `cargo run --release` for production
+
+remember to build the frontend first, as it gets included into the rust binary during compilation
+
+### datasets
+
+underpass needs two datasets: taginfo and elevation. 
+these are not included in this repo, and have to be generated before running underpass. 
+read [data/readme.md](./data/readme.md) for more information
+
 ## improvements over overpass-turbo
 
 first and foremost, node popups include a link to google maps and a link to copy coordinates for the node.
@@ -19,32 +36,8 @@ it also adds some features that are common in more fully featured, such as `Ctrl
 
 ### overpass ql extensions
 
-#### geocodeArea
+read [docs/overpass-ql-extensions.md](./docs/overpass-ql-extensions.md)
 
-using a `geocodeArea` macro will display the found area at the bottom, so you can ensure you are looking in the correct spot
-
-`geocodeArea` has been extended to support multiple areas, separated by `;`
-
-```
-{{geocodeArea:Hokkaido, Japan; Aomori, Japan}}->.japan;
-```
-
-`geocodeArea` also supports specifying what language to search in by adding `@{lang code}`:
-
-```
-{{geocodeArea:Hokkaido, Japón@es; Madrid, España@es; Île-de-France@fr}}->.places;
-```
-
-if no language is specified, `en` is used
-
-#### aroundSelf macro
-    
-it also implements more macros, such as `aroundSelf`, which works like:
-
-```
-node["amenity"="bench"]({{bbox}})->.benches;
-{{aroundSelf.benches:7}}->.benchesAroundOtherBenches;
-```
 ### node editor
 
 underpass implements a node editor that allows for powerful filtering that cannot be simply with the overpass API.
@@ -56,13 +49,3 @@ not many filters have been implemented yet, but more are comming soon
 the map is implemented using the [maplibre gl](https://maplibre.org/maplibre-gl-js/docs/) library,
 which has a better performance when dealing with larger amounts of nodes
 
-## building
-
-you will need `rust`, `cargo`, `node`, and `npm` installed
-
-frontend is built by running either `npm run build` (development), `npm run watch` (watch command), or `npm run prod` (production).
-typescript can be typechecked by running `npm run typecheck`
-
-rust can be built and run by `cargo run`, and `cargo run --release` for production
-
-remember to build the frontend first, since it gets included into the rust binary during compilation

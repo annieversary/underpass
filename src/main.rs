@@ -2,7 +2,7 @@ use std::{net::SocketAddr, path::PathBuf, sync::Arc};
 
 use tokio::net::TcpListener;
 
-use underpass::{app_state, elevation, routes, taginfo, tracing};
+use underpass::{app_state, elevation, routes, tracing};
 
 #[tokio::main]
 async fn main() {

@@ -6,3 +6,4 @@ public
 /deploy.sh
 /.env
 /logs
+/data

@@ -8,20 +8,29 @@ instead of directly on the user's browser
 
 ## building
 
-you will need `rust`, `cargo`, `node`, and `npm` installed
+underpass required `rust`, `cargo`, `node`, and `npm` to be installed, and optionally the [just](https://github.com/casey/just) command runner
 
-frontend is built by running either `npm run build` (development), `npm run watch` (watch command), or `npm run prod` (production).
+### manually
+
+frontend is built by running either `npm run build` (for development), `npm run watch` (with hot reloading), or `npm run prod` (for production).
 typescript can be typechecked by running `npm run typecheck`
 
 rust can be built and run by `cargo run`, and `cargo run --release` for production
 
 remember to build the frontend first, as it gets included into the rust binary during compilation
 
-### datasets
+### with just
+
+- `just run`: build and run for development
+- `just release`: build a binary for release 
+- `just test`: run js and rust tests, typecheck typescript
+- `just get-data`: fetch required datasets
+
+## datasets
 
 underpass needs two datasets: taginfo and elevation. 
 these are not included in this repo, and have to be generated before running underpass. 
-read [data/readme.md](./data/readme.md) for more information
+they can be fetched with `just get-data`
 
 ## improvements over overpass-turbo
 

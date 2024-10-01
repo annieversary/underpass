@@ -30,7 +30,11 @@ remember to build the frontend first, as it gets included into the rust binary d
 
 underpass needs two datasets: taginfo and elevation. 
 these are not included in this repo, and have to be generated before running underpass. 
-they can be fetched with `just get-data`
+they can be fetched with `just get-data`.
+
+these datasets are optional, and underpass will run without them.
+in the case of missing elevation data, all points will be considered as having elevation 0.
+in the case of missing taginfo, no information about tags will be used.
 
 ## improvements over overpass-turbo
 

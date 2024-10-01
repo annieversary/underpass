@@ -61,6 +61,7 @@ async fn get_taginfo(State(state): State<Arc<AppState>>) -> String {
     if taginfo_path.exists() {
         read_to_string(taginfo_path).await.unwrap()
     } else {
+        tracing::debug!("{taginfo_path:?} not found, returning empty array");
         "[]".to_string()
     }
 }

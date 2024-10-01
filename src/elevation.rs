@@ -16,14 +16,18 @@ impl ElevationMap {
     pub fn new(path: &Path) -> Result<Self, ElevationError> {
         let mut tree = RTree::new();
 
-        for entry in path.read_dir()?.flatten() {
-            if entry.file_name().to_string_lossy().ends_with(".tif") {
-                let corner_coords = get_coorner_coords(&entry.path())?;
-                tree.insert(
-                    Rect::new(corner_coords.bottom_left, corner_coords.top_right),
-                    entry.path(),
-                );
+        if path.exists() {
+            for entry in path.read_dir()?.flatten() {
+                if entry.file_name().to_string_lossy().ends_with(".tif") {
+                    let corner_coords = get_coorner_coords(&entry.path())?;
+                    tree.insert(
+                        Rect::new(corner_coords.bottom_left, corner_coords.top_right),
+                        entry.path(),
+                    );
+                }
             }
+        } else {
+            tracing::error!("{path:?} doesn't exist, constructing empty ElevationMap");
         }
 
         Ok(Self { tree })

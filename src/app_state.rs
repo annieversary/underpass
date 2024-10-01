@@ -16,11 +16,4 @@ impl AppState {
             caches: Caches::new(),
         }
     }
-
-    pub fn taginfo_path(&self) -> PathBuf {
-        let mut taginfo_path = self.data_path.clone();
-        taginfo_path.push("taginfo");
-        taginfo_path.push("taginfo.json");
-        taginfo_path
-    }
 }

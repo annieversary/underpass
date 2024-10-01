@@ -1,13 +1,13 @@
-use crate::{app_state::AppState, search, taginfo};
+use crate::{app_state::AppState, search, taginfo::taginfo_path};
 
 use std::sync::Arc;
 
 use axum::{
+    extract::State,
     response::Html,
     routing::{get, post},
     Router,
 };
-#[allow(unused_imports)]
 use tokio::fs::read_to_string;
 
 pub fn make_router() -> Router<Arc<AppState>> {
@@ -15,7 +15,7 @@ pub fn make_router() -> Router<Arc<AppState>> {
         .route("/", get(home))
         .route("/index.css", get(css))
         .route("/index.js", get(js))
-        .route("/taginfo.json", get(taginfo::get_taginfo))
+        .route("/taginfo.json", get(get_taginfo))
         .route("/search", post(search::search))
 }
 
@@ -53,4 +53,14 @@ async fn js() -> ([(&'static str, &'static str); 1], String) {
     let a = include_str!("../public/index.js").to_string();
 
     ([("content-type", "text/js")], a)
+}
+
+async fn get_taginfo(State(state): State<Arc<AppState>>) -> String {
+    let taginfo_path = taginfo_path(&state.data_path);
+
+    if taginfo_path.exists() {
+        read_to_string(taginfo_path).await.unwrap()
+    } else {
+        "[]".to_string()
+    }
 }

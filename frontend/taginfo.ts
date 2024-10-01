@@ -24,6 +24,6 @@ async function loadTaginfo() {
         taginfo[key.key] = key;
     }
 }
-loadTaginfo();
+loadTaginfo().catch(e => console.error('Failed to load taginfo.json', e));
 
 export let taginfo: { [key: string]: TagKey } = {};

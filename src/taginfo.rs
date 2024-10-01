@@ -1,11 +1,9 @@
 use std::{
     path::{Path, PathBuf},
-    sync::Arc,
     time::Duration,
 };
 
 use axum::{
-    extract::State,
     http::StatusCode,
     response::{IntoResponse, Json},
 };
@@ -13,9 +11,7 @@ use scraper::{CaseSensitivity, Html, Selector};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use thiserror::Error;
-use tokio::{fs::read_to_string, time::sleep};
-
-use crate::app_state::AppState;
+use tokio::time::sleep;
 
 fn all_keys_url(page: usize, per_page: usize) -> String {
     format!("https://taginfo.openstreetmap.org/api/4/keys/all?page={page}&rp={per_page}&sortname=count_all&sortorder=desc&filter=in_wiki")
@@ -33,10 +29,6 @@ pub fn taginfo_path(data_path: &Path) -> PathBuf {
     taginfo_path.push("taginfo");
     taginfo_path.push("taginfo.json");
     taginfo_path
-}
-
-pub async fn get_taginfo(State(state): State<Arc<AppState>>) -> impl IntoResponse {
-    read_to_string(state.taginfo_path()).await.unwrap()
 }
 
 pub async fn update_taginfo(taginfo_path: PathBuf) -> Result<(), TagInfoError> {

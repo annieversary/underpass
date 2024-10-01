@@ -1,4 +1,8 @@
-use std::{path::PathBuf, sync::Arc, time::Duration};
+use std::{
+    path::{Path, PathBuf},
+    sync::Arc,
+    time::Duration,
+};
 
 use axum::{
     extract::State,
@@ -24,18 +28,18 @@ fn all_values_url(key: &str, page: usize, per_page: usize) -> String {
 const PER_PAGE: usize = 999;
 const SLEEP_TIME: u64 = 100;
 
+pub fn taginfo_path(data_path: &Path) -> PathBuf {
+    let mut taginfo_path = data_path.to_path_buf();
+    taginfo_path.push("taginfo");
+    taginfo_path.push("taginfo.json");
+    taginfo_path
+}
+
 pub async fn get_taginfo(State(state): State<Arc<AppState>>) -> impl IntoResponse {
     read_to_string(state.taginfo_path()).await.unwrap()
 }
 
-pub async fn update_taginfo_route(
-    State(state): State<Arc<AppState>>,
-) -> Result<impl IntoResponse, TagInfoError> {
-    update_taginfo(state.taginfo_path()).await
-}
-
-pub async fn update_taginfo(taginfo_path: PathBuf) -> Result<impl IntoResponse, TagInfoError> {
-    println!("updating taginfo");
+pub async fn update_taginfo(taginfo_path: PathBuf) -> Result<(), TagInfoError> {
     let mut keys: Vec<Key> = vec![];
     let mut page = 1;
     loop {
@@ -129,7 +133,7 @@ pub async fn update_taginfo(taginfo_path: PathBuf) -> Result<impl IntoResponse, 
 
     std::fs::write(taginfo_path, keys)?;
 
-    Ok("done")
+    Ok(())
 }
 
 #[derive(Debug, Deserialize, Serialize)]

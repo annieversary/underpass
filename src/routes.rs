@@ -15,13 +15,12 @@ pub fn make_router() -> Router<Arc<AppState>> {
         .route("/index.css", get(css))
         .route("/index.js", get(js))
         .route("/taginfo.json", get(taginfo::get_taginfo))
-        .route("/update-taginfo", get(taginfo::update_taginfo_route))
         .route("/search", post(search::search))
 }
 
 async fn home() -> Html<String> {
     // read file when on debug, embed file when on release
-    // this way we can live edit in local, and dont have to keep the files next to the executable in prod
+    // this way we can live edit locally, and we don't need to keep the files next to the executable in prod
 
     #[cfg(debug_assertions)]
     return Html(read_to_string("./frontend/index.html").await.unwrap());

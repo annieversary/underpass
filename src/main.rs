@@ -27,13 +27,6 @@ async fn main() {
 
     let state = app_state::AppState::new(data_path, elevation_map);
 
-    let taginfo_path = state.taginfo_path();
-    if !taginfo_path.exists() {
-        if let Err(err) = taginfo::update_taginfo(taginfo_path).await {
-            panic!("{:?}", err);
-        }
-    }
-
     let app = routes::make_router().with_state(Arc::new(state));
 
     let port: u16 = std::env::var("PORT")

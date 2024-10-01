@@ -2,7 +2,11 @@
 
 ### taginfo
 
-is generated from rust
+generated from rust
+
+```sh
+cargo r --bin update-taginfo
+```
 
 ### elevation
 

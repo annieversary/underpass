@@ -9,7 +9,7 @@ import { vim, Vim } from "@replit/codemirror-vim"
 
 import '../codeEditor.css';
 
-import { processedQueries } from '../index';
+import { processedQueries } from '../processed-queries';
 import { settings, vimCompartment } from '../settings';
 import { oql } from '../oql-parser';
 
@@ -99,9 +99,8 @@ function newEditor(parent: HTMLDivElement, query: string, saveGraph: () => void,
             ViewPlugin.fromClass(class {
                 update(_update: ViewUpdate) {
                     saveGraph();
-                    if (processedQueries) {
-                        delete processedQueries[id];
-                    }
+
+                    processedQueries.delete(id);
                 }
             }),
             tooltip(),

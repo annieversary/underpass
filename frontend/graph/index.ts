@@ -1,6 +1,6 @@
 import { removeTab } from '../codeEditor/index';
 import { openModal } from '../modal';
-import { processedQueries } from '../index';
+import { processedQueries } from '../processed-queries';
 
 import { saveGraph, saveEvents } from './save';
 import { Node, geojsonNodeList, queryNodeList, NodeList } from './nodes';
@@ -152,7 +152,7 @@ const contextMenu = new ContextMenuPlugin<Schemes>({
             ];
 
             const nodeId = context.id;
-            const query = processedQueries[nodeId];
+            const query = processedQueries.get(nodeId);
             if (context.label == 'OQL Code' && query) {
                 list.push({
                     label: 'View query',

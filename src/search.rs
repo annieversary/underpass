@@ -86,30 +86,35 @@ pub enum SearchError {
     Graph(#[from] GraphError),
 }
 
+impl SearchError {
+    fn node_id(&self) -> Option<&String> {
+        match self {
+            Self::Graph(GraphError::OqlSyntax { node_id, .. }) => Some(node_id),
+            Self::Graph(GraphError::InputMissing { node_id, .. }) => Some(node_id),
+            _ => None,
+        }
+    }
+}
+
 impl IntoResponse for SearchError {
     fn into_response(self) -> axum::response::Response {
-        let mut json = json!({
+        let data = if let Self::Graph(GraphError::OqlSyntax { query, error, .. }) = &self {
+            json!({
+                "format": "xml",
+                "query": query,
+                "message": error,
+            })
+        } else {
+            json!({
+                "format": "text",
+            })
+        };
+
+        let json = json!({
             "error": format!("{self}"),
-            "format": if matches!(self, Self::Graph(GraphError::OqlSyntax{ .. })) { "xml" } else { "text" },
+            "data": data,
+            "node_id": self.node_id(),
         });
-
-        let map = json.as_object_mut().unwrap();
-
-        match &self {
-            Self::Graph(GraphError::OqlSyntax {
-                query,
-                node_id,
-                error,
-            }) => {
-                map.insert("query".to_string(), query.clone().into());
-                map.insert("message".to_string(), error.clone().into());
-                map.insert("node_id".to_string(), node_id.clone().into());
-            }
-            Self::Graph(GraphError::InputMissing { node_id, .. }) => {
-                map.insert("node_id".to_string(), node_id.clone().into());
-            }
-            _ => {}
-        }
 
         (StatusCode::INTERNAL_SERVER_ERROR, Json(json)).into_response()
     }

@@ -34,7 +34,12 @@ export const map = new Map({
     zoom
 });
 
-export function mapBounds() {
+export type MapBounds = {
+    ne: [number, number],
+    sw: [number, number],
+};
+
+export function mapBounds(): MapBounds {
     const b = map.getBounds();
     return {
         ne: [b._ne.lat, b._ne.lng],

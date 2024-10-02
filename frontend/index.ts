@@ -6,6 +6,7 @@ import './style.css';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import '@maplibre/maplibre-gl-geocoder/dist/maplibre-gl-geocoder.css';
 
+import { search } from './search';
 import { map, mapBounds } from './map';
 import { serializeGraph } from './graph/save';
 import { settings } from './settings';
@@ -65,21 +66,11 @@ async function run() {
     mapSetSource('OverpassAPI', { type: "FeatureCollection", features: [] });
 
     try {
-        const r = await fetch('/search', {
-            method: 'POST',
-            body: JSON.stringify({
-                bbox: mapBounds(),
-                graph: serializeGraph(),
-            }),
-            headers: {
-                'Content-Type': 'application/json'
-            },
-        });
-        const res = await r.json();
+        const response = await search(mapBounds(), serializeGraph());
 
         resultsDiv.innerHTML = '';
-        if (r.status == 200) {
-            const data = res.data;
+        if (response.ok === 'true') {
+            const data = response.data;
 
             if (settings.hideEmptyNodes()) {
                 data.features = data.features
@@ -88,18 +79,19 @@ async function run() {
 
             mapSetSource('OverpassAPI', data);
 
-            if (res.geocode_areas.length > 0) {
-                const areas = res.geocode_areas.map((a: any) => `${a.original} - <a href="//www.openstreetmap.org/${a.ty}/${a.id}" target="_blank" class="osm-link">${a.name}</a><br/>`).join('');
+            if (response.geocode_areas.length > 0) {
+                const areas = response.geocode_areas.map((a: any) => `${a.original} - <a href="//www.openstreetmap.org/${a.ty}/${a.id}" target="_blank" class="osm-link">${a.name}</a><br/>`).join('');
                 resultsDiv.innerHTML = `<h2>Geocode areas found:</h2>${areas}`;
             }
 
-            if (res.processed_queries) {
-                processedQueries = res.processed_queries;
+            if (response.processed_queries) {
+                processedQueries = response.processed_queries;
             }
         } else {
-            if (res.format == 'xml') {
+            const data = response.data;
+            if (data.format === "xml") {
                 const dom = new window.DOMParser().parseFromString(
-                    res.message,
+                    data.message,
                     "text/xml"
                 );
                 alert(
@@ -109,7 +101,7 @@ async function run() {
                         .join("\n")
                 );
             } else {
-                alert(res.error);
+                alert(response.error);
             }
 
             // TODO do something to highlight node if node_id is set

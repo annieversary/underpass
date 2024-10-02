@@ -1,13 +1,13 @@
-import maplibregl, { MapLayerEventType, GeoJSONSource, AddLayerObject, Map, Popup, MapGeoJSONFeature, LngLat } from 'maplibre-gl';
+import maplibregl, { MapLayerEventType, GeoJSONSource, AddLayerObject, Map, Popup, MapGeoJSONFeature, LngLat, MapMouseEvent } from 'maplibre-gl';
 import MaplibreGeocoder from '@maplibre/maplibre-gl-geocoder';
 import * as turf from '@turf/turf';
-import { GeoJSON } from 'geojson';
+import { GeoJSON, Feature } from 'geojson';
 
 let [zoom, lat, lng] = JSON.parse(window.localStorage.getItem("viewport")) || [
     16, 51.945356463918586, -0.0175273074135589,
 ];
 
-export const map = new Map({
+const map = new Map({
     container: 'map',
     style: {
         version: 8,
@@ -39,9 +39,18 @@ export const map = new Map({
 /**
  * Sets the GeoJSON data for this source
  */
-export function mapSetData(source: string, data: GeoJSON): void {
+export function setMapData(source: string, data: GeoJSON): void {
     (map.getSource(source) as GeoJSONSource)
         .setData(data);
+}
+
+/**
+ * @returns A plain (stringifiable) JS object representing the current state of the source.
+ * Creating a source using the returned object as the `options` should result in a Source that is
+ * equivalent to this one.
+ */
+export function getMapData(source: string): any {
+    return map.getSource(source).serialize();
 }
 
 export type MapBounds = {
@@ -280,4 +289,152 @@ map.addControl(
     new MaplibreGeocoder(geocoderApi, {
         maplibregl
     })
+);
+
+
+
+
+// corner tooltip with coordinates
+const infoDiv = document.getElementById('info');
+
+function updateInfo(e: MapMouseEvent) {
+    infoDiv.innerHTML = `${e.lngLat.wrap().lat.toFixed(8)},${e.lngLat.wrap().lng.toFixed(8)}`;
+    if (distance) {
+        infoDiv.innerHTML += `, distance: ${distance}m`;
+    }
+}
+map.on('mousemove', updateInfo);
+map.on('mouseup', updateInfo);
+
+let distance = null;
+let distanceMeasureGeojson = {
+    'type': 'FeatureCollection',
+    'features': []
+};
+map.on('load', () => {
+    const linestring = {
+        'type': 'Feature',
+        'geometry': {
+            'type': 'LineString',
+            'coordinates': []
+        }
+    };
+
+    map.addSource('distance-measure', {
+        'type': 'geojson',
+        'data': distanceMeasureGeojson
+    });
+
+    // Add styles to the map
+    map.addLayer({
+        id: 'measure-points',
+        type: 'circle',
+        source: 'distance-measure',
+        paint: {
+            'circle-radius': 5,
+            'circle-color': '#000'
+        },
+        filter: ['in', '$type', 'Point']
+    });
+    map.addLayer({
+        id: 'measure-lines',
+        type: 'line',
+        source: 'distance-measure',
+        layout: {
+            'line-cap': 'round',
+            'line-join': 'round'
+        },
+        paint: {
+            'line-color': '#000',
+            'line-width': 2.5
+        },
+        filter: ['in', '$type', 'LineString']
+    });
+
+
+    map.on('click', (e) => {
+        const on = distanceButton.dataset.on == 'true';
+        if (!on) return;
+
+        if (distanceMeasureGeojson.features.length > 1) distanceMeasureGeojson.features.pop();
+
+        const point = {
+            'type': 'Feature',
+            'geometry': {
+                'type': 'Point',
+                'coordinates': [e.lngLat.lng, e.lngLat.lat]
+            },
+            'properties': {
+                'id': String(new Date().getTime())
+            }
+        };
+
+        distanceMeasureGeojson.features.push(point);
+
+        if (distanceMeasureGeojson.features.length > 1) {
+            linestring.geometry.coordinates = distanceMeasureGeojson.features.map(
+                (point) => {
+                    return point.geometry.coordinates;
+                }
+            );
+
+            distanceMeasureGeojson.features.push(linestring);
+
+            distance = (1000 * turf.length(linestring as Feature)).toLocaleString();
+        }
+
+        setMapData('distance-measure', distanceMeasureGeojson as GeoJSON);
+    });
+
+});
+
+const distanceButton = document.querySelector<HTMLButtonElement>('#distance-button');
+function toggleDistance() {
+    distanceButton.dataset.on = distanceButton.dataset.on == 'true' ? 'false' : 'true';
+
+    const on = distanceButton.dataset.on == 'true';
+    if (!on) {
+        distance = null;
+        setMapData('distance-measure', { type: "FeatureCollection", features: [] });
+        distanceMeasureGeojson = {
+            'type': 'FeatureCollection',
+            'features': []
+        };
+    }
+
+    map.getCanvas().style.cursor = !on ? 'pointer' : 'crosshair';
+};
+
+distanceButton.onclick = toggleDistance;
+
+
+// setup keybindings
+const deltaDistance = 100;
+function easing(t: number) {
+    return t * (2 - t);
+}
+map.getCanvas().addEventListener(
+    'keydown',
+    (e) => {
+        if (e.key === 'D') {
+            toggleDistance();
+        } else if (e.key === 'w') {
+            map.panBy([0, -deltaDistance], {
+                easing
+            });
+        } else if (e.key === 's') {
+            map.panBy([0, deltaDistance], {
+                easing
+            });
+        } else if (e.key === 'a') {
+            map.panBy([-deltaDistance, 0], {
+                easing
+            });
+        } else if (e.key === 'd') {
+            map.panBy([deltaDistance, 0], {
+                easing
+            });
+        }
+    },
+    true
 );

@@ -4,7 +4,7 @@ import { serializeGraph } from './graph/save';
 export type SearchGraph = ReturnType<typeof serializeGraph>;
 export type SearchResult = SearchSuccess | SearchError;
 
-type SearchSuccess = {
+export type SearchSuccess = {
     ok: 'true',
     data: any,
     processed_queries: {
@@ -13,7 +13,7 @@ type SearchSuccess = {
     },
     geocode_areas: any[]
 };
-type SearchError = {
+export type SearchError = {
     ok: 'false',
     /// Text representation of the error
     error: string,

@@ -1,4 +1,4 @@
-import { GeoJSONSource, MapMouseEvent } from 'maplibre-gl';
+import { MapMouseEvent } from 'maplibre-gl';
 import * as turf from '@turf/turf';
 import { GeoJSON, Feature } from 'geojson';
 
@@ -6,42 +6,12 @@ import './style.css';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import '@maplibre/maplibre-gl-geocoder/dist/maplibre-gl-geocoder.css';
 
-import { search } from './search';
-import { map, mapBounds } from './map';
+import { SearchError, SearchSuccess, search } from './search';
+import { map, mapBounds, mapSetData } from './map';
 import { serializeGraph } from './graph/save';
 import { settings } from './settings';
-
-
-
-// resize
-const resizer = document.querySelector("#resizer");
-const left: HTMLDivElement = document.querySelector("#left");
-const right: HTMLDivElement = document.querySelector("#right");
-
-function resize(e: { x: number }) {
-    left.style.width = `${e.x}px`;
-    right.style.width = `calc(100vw - ${e.x}px)`;
-    window.localStorage.setItem('codeWidth', e.x.toString());
-}
-
-const codeWidth = +window.localStorage.getItem('codeWidth') || (window.innerWidth * 0.3);
-// so for some reason, when the codeWidth is too small, the map doesnt fill all of the available space
-// resizing does force it to take all the space available, so we set it to +1, then immediately set it to the correct value
-// this makes it work as expected tho it's *slightly* hacky and funky
-resize({ x: codeWidth + 1 });
-setTimeout(() => {
-    resize({ x: codeWidth });
-}, 100);
-
-resizer.addEventListener("mousedown", () => {
-    document.addEventListener("mousemove", resize, false);
-    document.addEventListener("mouseup", () => {
-        document.removeEventListener("mousemove", resize, false);
-    }, false);
-});
-
-
-
+import { setLoading, isLoading } from './loading';
+import './resizer';
 
 export let processedQueries = {};
 
@@ -49,62 +19,20 @@ export let processedQueries = {};
 
 let resultsDiv = document.querySelector("#results");
 
-// loading modal doesnt use openModal cause we want this custom style which looks nicer imo
-let loading = false;
-let loadingModal: HTMLDivElement = document.querySelector("#loading-modal");
-
-function mapSetSource(source: string, data: GeoJSON) {
-    (map.getSource(source) as GeoJSONSource)
-        .setData(data);
-}
-
 async function run() {
-    if (loading) return;
-    loading = true;
-    loadingModal.style.display = 'flex';
+    if (isLoading()) return;
+    setLoading(true);
 
-    mapSetSource('OverpassAPI', { type: "FeatureCollection", features: [] });
+    mapSetData('OverpassAPI', { type: "FeatureCollection", features: [] });
 
     try {
         const response = await search(mapBounds(), serializeGraph());
 
         resultsDiv.innerHTML = '';
         if (response.ok === 'true') {
-            const data = response.data;
-
-            if (settings.hideEmptyNodes()) {
-                data.features = data.features
-                    .filter((f: Feature) => !(f.geometry.type == "Point" && Object.keys(f.properties).length == 0));
-            }
-
-            mapSetSource('OverpassAPI', data);
-
-            if (response.geocode_areas.length > 0) {
-                const areas = response.geocode_areas.map((a: any) => `${a.original} - <a href="//www.openstreetmap.org/${a.ty}/${a.id}" target="_blank" class="osm-link">${a.name}</a><br/>`).join('');
-                resultsDiv.innerHTML = `<h2>Geocode areas found:</h2>${areas}`;
-            }
-
-            if (response.processed_queries) {
-                processedQueries = response.processed_queries;
-            }
+            handleRunSuccess(response);
         } else {
-            const data = response.data;
-            if (data.format === "xml") {
-                const dom = new window.DOMParser().parseFromString(
-                    data.message,
-                    "text/xml"
-                );
-                alert(
-                    Array.from(dom.body.querySelectorAll("p"))
-                        .slice(1)
-                        .map((p) => p.textContent)
-                        .join("\n")
-                );
-            } else {
-                alert(response.error);
-            }
-
-            // TODO do something to highlight node if node_id is set
+            handleRunError(response);
         }
     } catch (e) {
         console.error(e);
@@ -113,8 +41,47 @@ async function run() {
         }
     }
 
-    loading = false;
-    loadingModal.style.display = 'none';
+    setLoading(false);
+}
+
+function handleRunSuccess(response: SearchSuccess) {
+    const data = response.data;
+
+    if (settings.hideEmptyNodes()) {
+        data.features = data.features
+            .filter((f: Feature) => !(f.geometry.type == "Point" && Object.keys(f.properties).length == 0));
+    }
+
+    mapSetData('OverpassAPI', data);
+
+    if (response.geocode_areas.length > 0) {
+        const areas = response.geocode_areas.map((a: any) => `${a.original} - <a href="//www.openstreetmap.org/${a.ty}/${a.id}" target="_blank" class="osm-link">${a.name}</a><br/>`).join('');
+        resultsDiv.innerHTML = `<h2>Geocode areas found:</h2>${areas}`;
+    }
+
+    if (response.processed_queries) {
+        processedQueries = response.processed_queries;
+    }
+}
+
+function handleRunError(response: SearchError) {
+    const data = response.data;
+    if (data.format === "xml") {
+        const dom = new window.DOMParser().parseFromString(
+            data.message,
+            "text/xml"
+        );
+        alert(
+            Array.from(dom.body.querySelectorAll("p"))
+                .slice(1)
+                .map((p) => p.textContent)
+                .join("\n")
+        );
+    } else {
+        alert(response.error);
+    }
+
+    // TODO do something to highlight node if node_id is set
 }
 
 document.querySelector<HTMLButtonElement>('#run-button').onclick = run;
@@ -126,7 +93,7 @@ document.addEventListener('keydown', (event) => {
 });
 
 document.querySelector<HTMLButtonElement>('#clear-button').onclick = () => {
-    mapSetSource('OverpassAPI', { type: "FeatureCollection", features: [] });
+    mapSetData('OverpassAPI', { type: "FeatureCollection", features: [] });
 };
 
 document.querySelector<HTMLButtonElement>('#export-button').onclick = () => {
@@ -134,12 +101,15 @@ document.querySelector<HTMLButtonElement>('#export-button').onclick = () => {
     if (out.data.features.length == 0) {
         alert('No data to export!');
     } else {
-        download('export.json', out);
+        downloadAsJsonFile('export.json', out);
     }
 };
-function download(filename: string, json: any) {
+/**
+ * Download the provided object as a JSON file
+ */
+function downloadAsJsonFile(filename: string, object: any) {
     var element = document.createElement('a');
-    element.setAttribute('href', 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(json)));
+    element.setAttribute('href', 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(object)));
     element.setAttribute('download', filename);
 
     element.style.display = 'none';
@@ -244,7 +214,7 @@ map.on('load', () => {
             distance = (1000 * turf.length(linestring as Feature)).toLocaleString();
         }
 
-        mapSetSource('distance-measure', distanceMeasureGeojson as GeoJSON);
+        mapSetData('distance-measure', distanceMeasureGeojson as GeoJSON);
     });
 
 });
@@ -256,7 +226,7 @@ function toggleDistance() {
     const on = distanceButton.dataset.on == 'true';
     if (!on) {
         distance = null;
-        mapSetSource('distance-measure', { type: "FeatureCollection", features: [] });
+        mapSetData('distance-measure', { type: "FeatureCollection", features: [] });
         distanceMeasureGeojson = {
             'type': 'FeatureCollection',
             'features': []

@@ -1,6 +1,7 @@
 import maplibregl, { MapLayerEventType, GeoJSONSource, AddLayerObject, Map, Popup, MapGeoJSONFeature, LngLat } from 'maplibre-gl';
 import MaplibreGeocoder from '@maplibre/maplibre-gl-geocoder';
 import * as turf from '@turf/turf';
+import { GeoJSON } from 'geojson';
 
 let [zoom, lat, lng] = JSON.parse(window.localStorage.getItem("viewport")) || [
     16, 51.945356463918586, -0.0175273074135589,
@@ -33,6 +34,15 @@ export const map = new Map({
     center: [lng, lat],
     zoom
 });
+
+
+/**
+ * Sets the GeoJSON data for this source
+ */
+export function mapSetData(source: string, data: GeoJSON): void {
+    (map.getSource(source) as GeoJSONSource)
+        .setData(data);
+}
 
 export type MapBounds = {
     ne: [number, number],

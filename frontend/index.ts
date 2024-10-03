@@ -7,6 +7,7 @@ import { mapBounds, setMapData, getMapData } from './map';
 import { serializeGraph } from './graph/save';
 import { settings } from './settings';
 import './resizer';
+import './run';
 
 document.querySelector<HTMLButtonElement>('#clear-button').onclick = () => {
     setMapData('OverpassAPI', { type: "FeatureCollection", features: [] });

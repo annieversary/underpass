@@ -1,6 +1,7 @@
 use std::{net::SocketAddr, path::PathBuf, sync::Arc};
 
 use tokio::net::TcpListener;
+use tower_http::trace::TraceLayer;
 
 use underpass::{app_state, elevation, routes, taginfo::taginfo_path, tracing};
 
@@ -11,10 +12,7 @@ async fn main() {
         panic!("{:?}", err);
     }
 
-    let log_path = std::env::var("LOG_PATH")
-        .expect("failed to get LOG_PATH")
-        .into();
-    let _tracing_guard = tracing::setup_tracing(log_path);
+    let _tracing_guard = tracing::setup_tracing();
 
     let data_path: PathBuf = std::env::var("DATA_PATH")
         .expect("failed to get DATA")
@@ -32,7 +30,9 @@ async fn main() {
 
     let state = app_state::AppState::new(data_path, elevation_map);
 
-    let app = routes::make_router().with_state(Arc::new(state));
+    let app = routes::make_router()
+        .layer(TraceLayer::new_for_http())
+        .with_state(Arc::new(state));
 
     let port: u16 = std::env::var("PORT")
         .ok()
